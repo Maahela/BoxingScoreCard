@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user has a valid PIN
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to get PIN data
+    function getPinData() {
+      return get(/databases/$(database)/documents/pins/$(request.auth.uid)).data;
+    }
+    
+    // Helper function to check user role
+    function hasRole(role) {
+      return isAuthenticated() && getPinData().role == role;
+    }
+    
+    // Helper function to check if invigilator is assigned to event
+    function isAssignedToEvent(eventId) {
+      return isAuthenticated() && 
+             getPinData().role == 'invigilator' &&
+             eventId in getPinData().eventsAssigned;
+    }
+
+    // PINs collection - read only for authentication
+    match /pins/{pinId} {
+      allow read: if true; // Needed for PIN verification during login
+      allow write: if hasRole('admin');
+    }
+
+    // Faculties collection
+    match /faculties/{facultyId} {
+      allow read: if true; // Everyone can read faculties
+      allow write: if hasRole('admin');
+    }
+
+    // Participants collection
+    match /participants/{participantId} {
+      allow read: if true; // Everyone can read participants
+      allow write: if hasRole('admin');
+    }
+
+    // Events collection
+    match /events/{eventId} {
+      allow read: if true; // Everyone can read events
+      allow write: if hasRole('admin');
+    }
+
+    // Templates collection
+    match /templates/{templateId} {
+      allow read: if true; // Everyone can read templates
+      allow write: if hasRole('admin');
+    }
+
+    // Invigilators collection
+    match /invigilators/{invigilatorId} {
+      allow read: if hasRole('admin');
+      allow write: if hasRole('admin');
+    }
+
+    // Assignments collection
+    match /assignments/{assignmentId} {
+      allow read: if true; // Everyone can read assignments
+      allow write: if hasRole('admin');
+    }
+
+    // Scores collection
+    match /scores/{scoreId} {
+      // Everyone can read scores (for display screen)
+      allow read: if true;
+      
+      // Invigilators can create scores for their assigned events
+      allow create: if hasRole('invigilator') && 
+                      isAssignedToEvent(request.resource.data.eventId) &&
+                      request.resource.data.invigilatorId == getPinData().invigilatorId;
+      
+      // Admin can update/delete scores (for corrections)
+      allow update, delete: if hasRole('admin');
+    }
+
+    // Aggregates collection (for faculty totals)
+    match /aggregates/{aggregateId} {
+      allow read: if true; // Everyone can read aggregates
+      allow write: if hasRole('admin'); // Only admin can manually update
+    }
+
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
