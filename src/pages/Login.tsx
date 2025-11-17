@@ -17,7 +17,7 @@ export function Login() {
 
     try {
       const pinData = await verifyPin(pin);
-      
+
       if (!pinData) {
         setError('Invalid PIN. Please try again.');
         setLoading(false);
