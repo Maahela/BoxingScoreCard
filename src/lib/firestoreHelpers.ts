@@ -98,11 +98,11 @@ export async function verifyPin(pin: string): Promise<PinAuth | null> {
   const pinsRef = collection(db, 'pins');
   const q = query(pinsRef, where('pin', '==', pin));
   const querySnapshot = await getDocs(q);
-  
+
   if (querySnapshot.empty) {
     return null;
   }
-  
+
   const pinDoc = querySnapshot.docs[0];
   return pinDoc.data() as PinAuth;
 }
@@ -112,12 +112,16 @@ export async function getFaculties(): Promise<Faculty[]> {
   return getDocuments<Faculty>('faculties', orderBy('order'));
 }
 
-export async function addFaculty(faculty: Omit<Faculty, 'id'>): Promise<string> {
+export async function addFaculty(
+  faculty: Omit<Faculty, 'id'>
+): Promise<string> {
   return addDocument<Faculty>('faculties', faculty);
 }
 
 // Participant helpers
-export async function getParticipants(facultyId?: string): Promise<Participant[]> {
+export async function getParticipants(
+  facultyId?: string
+): Promise<Participant[]> {
   if (facultyId) {
     return getDocuments<Participant>(
       'participants',
@@ -127,7 +131,9 @@ export async function getParticipants(facultyId?: string): Promise<Participant[]
   return getDocuments<Participant>('participants');
 }
 
-export async function addParticipant(participant: Omit<Participant, 'id'>): Promise<string> {
+export async function addParticipant(
+  participant: Omit<Participant, 'id'>
+): Promise<string> {
   return addDocument<Participant>('participants', participant);
 }
 
@@ -145,7 +151,9 @@ export async function getTemplates(): Promise<Template[]> {
   return getDocuments<Template>('templates');
 }
 
-export async function addTemplate(template: Omit<Template, 'id'>): Promise<string> {
+export async function addTemplate(
+  template: Omit<Template, 'id'>
+): Promise<string> {
   return addDocument<Template>('templates', template);
 }
 
@@ -154,16 +162,23 @@ export async function getInvigilators(): Promise<Invigilator[]> {
   return getDocuments<Invigilator>('invigilators');
 }
 
-export async function addInvigilator(invigilator: Omit<Invigilator, 'id'>): Promise<string> {
+export async function addInvigilator(
+  invigilator: Omit<Invigilator, 'id'>
+): Promise<string> {
   return addDocument<Invigilator>('invigilators', invigilator);
 }
 
 // Score helpers
 export async function addScore(score: Omit<Score, 'id'>): Promise<string> {
-  return addDocument<Score>('scores', {
-    ...score,
-    timestamp: Date.now(),
-  });
+  try {
+    console.log('Adding score:', score);
+    const id = await addDocument<Score>('scores', score);
+    console.log('Score added successfully with ID:', id);
+    return id;
+  } catch (error) {
+    console.error('Error adding score:', error);
+    throw error;
+  }
 }
 
 export async function getScoresByEvent(eventId: string): Promise<Score[]> {
@@ -184,7 +199,9 @@ export async function getCurrentAssignment(): Promise<Assignment | null> {
   return assignments[0] || null;
 }
 
-export async function addAssignment(assignment: Omit<Assignment, 'id'>): Promise<string> {
+export async function addAssignment(
+  assignment: Omit<Assignment, 'id'>
+): Promise<string> {
   return addDocument<Assignment>('assignments', assignment);
 }
 
@@ -192,17 +209,20 @@ export async function addAssignment(assignment: Omit<Assignment, 'id'>): Promise
 export async function calculateFacultyTotals(): Promise<FacultyTotals[]> {
   const faculties = await getFaculties();
   const allScores = await getDocuments<Score>('scores');
-  
+
   const totalsMap = new Map<string, FacultyTotals>();
-  
+
   faculties.forEach((faculty) => {
     totalsMap.set(faculty.id, {
       facultyId: faculty.id,
       eventTotals: {},
+      eventAverages: {},
+      phase1Total: 0,
+      phase2Total: 0,
       totalScore: 0,
     });
   });
-  
+
   allScores.forEach((score) => {
     const facultyTotal = totalsMap.get(score.facultyId);
     if (facultyTotal) {
@@ -213,6 +233,6 @@ export async function calculateFacultyTotals(): Promise<FacultyTotals[]> {
       facultyTotal.totalScore += score.total;
     }
   });
-  
+
   return Array.from(totalsMap.values());
 }

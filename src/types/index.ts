@@ -47,6 +47,8 @@ export interface Event {
   order: number;
   templateId: string;
   isCombat: boolean;
+  phase: 1 | 2; // Phase 1: Shadow/Bag/Skip simultaneous, Phase 2: Combat sequential
+  participantsRequired: 1 | 2; // Number of participants per faculty for this event
 }
 
 export interface Invigilator {
@@ -87,8 +89,14 @@ export interface Score {
 
 export interface FacultyTotals {
   facultyId: string;
-  eventTotals: Record<string, number>;
-  totalScore: number;
+  eventTotals: Record<string, number>; // event averages for events requiring 2 participants
+  eventAverages: Record<
+    string,
+    { total: number; count: number; average: number }
+  >; // detailed averaging info
+  phase1Total: number; // Sum of Phase 1 event averages
+  phase2Total: number; // Sum of Phase 2 event averages
+  totalScore: number; // Grand total
 }
 
 // UI state types

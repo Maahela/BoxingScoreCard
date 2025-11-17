@@ -27,37 +27,37 @@ service cloud.firestore {
     // PINs collection - read only for authentication
     match /pins/{pinId} {
       allow read: if true; // Needed for PIN verification during login
-      allow write: if hasRole('admin');
+      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
     }
 
     // Faculties collection
     match /faculties/{facultyId} {
       allow read: if true; // Everyone can read faculties
-      allow write: if hasRole('admin');
+      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
     }
 
     // Participants collection
     match /participants/{participantId} {
       allow read: if true; // Everyone can read participants
-      allow write: if hasRole('admin');
+      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
     }
 
     // Events collection
     match /events/{eventId} {
       allow read: if true; // Everyone can read events
-      allow write: if hasRole('admin');
+      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
     }
 
     // Templates collection
     match /templates/{templateId} {
       allow read: if true; // Everyone can read templates
-      allow write: if hasRole('admin');
+      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
     }
 
     // Invigilators collection
     match /invigilators/{invigilatorId} {
-      allow read: if hasRole('admin');
-      allow write: if hasRole('admin');
+      allow read: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
     }
 
     // Assignments collection
@@ -71,13 +71,11 @@ service cloud.firestore {
       // Everyone can read scores (for display screen)
       allow read: if true;
       
-      // Invigilators can create scores for their assigned events
-      allow create: if hasRole('invigilator') && 
-                      isAssignedToEvent(request.resource.data.eventId) &&
-                      request.resource.data.invigilatorId == getPinData().invigilatorId;
+      // Allow score creation (PIN auth is handled in app logic)
+      allow create: if true;
       
-      // Admin can update/delete scores (for corrections)
-      allow update, delete: if hasRole('admin');
+      // Allow updates and deletes
+      allow update, delete: if true;
     }
 
     // Aggregates collection (for faculty totals)

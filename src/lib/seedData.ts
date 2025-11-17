@@ -6,6 +6,10 @@ import {
   setDoc,
   doc,
 } from 'firebase/firestore';
+import * as dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 // Initialize Firebase with your config
 const firebaseConfig = {
@@ -17,6 +21,15 @@ const firebaseConfig = {
   appId: process.env.VITE_FIREBASE_APP_ID,
 };
 
+// Validate configuration
+if (!firebaseConfig.projectId) {
+  console.error('❌ Error: Firebase configuration is missing!');
+  console.error(
+    'Make sure your .env file exists with all VITE_FIREBASE_* variables.'
+  );
+  process.exit(1);
+}
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -24,6 +37,14 @@ async function seedData() {
   console.log('🌱 Starting data seeding...');
 
   try {
+    console.log(
+      '⚠️  WARNING: This will clear existing data and create fresh seed data.'
+    );
+    console.log('If you want to keep existing scores, stop now (Ctrl+C).');
+    console.log('Starting in 3 seconds...\n');
+
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
     // 1. Create PINs for authentication
     console.log('Creating PINs...');
     await setDoc(doc(db, 'pins', 'admin-pin'), {
@@ -38,19 +59,21 @@ async function seedData() {
       name: 'Display Screen',
     });
 
-    // 2. Create Faculties
+    // 2. Create Faculties with fixed IDs
     console.log('Creating faculties...');
     const faculties = [
-      { name: 'UCSC', colorHex: '#3B82F6', order: 0 },
-      { name: 'Management', colorHex: '#EF4444', order: 1 },
-      { name: 'Technology', colorHex: '#10B981', order: 2 },
-      { name: 'Science', colorHex: '#F59E0B', order: 3 },
+      { id: 'ucsc', name: 'UCSC', colorHex: '#3B82F6', order: 0 },
+      { id: 'management', name: 'Management', colorHex: '#EF4444', order: 1 },
+      { id: 'technology', name: 'Technology', colorHex: '#10B981', order: 2 },
+      { id: 'science', name: 'Science', colorHex: '#F59E0B', order: 3 },
+      { id: 'nursing', name: 'Nursing', colorHex: '#8B5CF6', order: 4 },
     ];
 
     const facultyIds: Record<string, string> = {};
     for (const faculty of faculties) {
-      const docRef = await addDoc(collection(db, 'faculties'), faculty);
-      facultyIds[faculty.name] = docRef.id;
+      const { id, ...facultyData } = faculty;
+      await setDoc(doc(db, 'faculties', id), facultyData);
+      facultyIds[faculty.name] = id;
       console.log(`✓ Created faculty: ${faculty.name}`);
     }
 
@@ -167,6 +190,8 @@ async function seedData() {
         templateId: templateIds['Shadow Boxing'],
         order: 0,
         isCombat: false,
+        phase: 1,
+        participantsRequired: 2,
       },
       {
         name: 'Punching Bag',
@@ -174,6 +199,8 @@ async function seedData() {
         templateId: templateIds['Punching Bag'],
         order: 1,
         isCombat: false,
+        phase: 1,
+        participantsRequired: 2,
       },
       {
         name: 'Skipping',
@@ -181,6 +208,8 @@ async function seedData() {
         templateId: templateIds['Skipping'],
         order: 2,
         isCombat: false,
+        phase: 1,
+        participantsRequired: 1,
       },
       {
         name: 'Boxing Combat',
@@ -188,6 +217,8 @@ async function seedData() {
         templateId: templateIds['Boxing Combat'],
         order: 3,
         isCombat: true,
+        phase: 2,
+        participantsRequired: 2,
       },
     ];
 
@@ -301,14 +332,716 @@ async function seedData() {
         alias: 'Blaze',
         events: Object.values(eventIds),
       },
+      // Nursing
+      {
+        name: 'David Lee',
+        facultyId: facultyIds['Nursing'],
+        alias: 'Hawk',
+        events: Object.values(eventIds),
+      },
+      {
+        name: 'Rachel Green',
+        facultyId: facultyIds['Nursing'],
+        alias: 'Storm',
+        events: Object.values(eventIds),
+      },
     ];
 
+    const participantIds: string[] = [];
     for (const participant of participants) {
-      await addDoc(collection(db, 'participants'), participant);
+      const docRef = await addDoc(collection(db, 'participants'), participant);
+      participantIds.push(docRef.id);
       console.log(
         `✓ Created participant: ${participant.name} (${participant.alias})`
       );
     }
+
+    // 7. Create Dummy Scores for all events
+    console.log('Creating dummy scores...');
+    const dummyScores = [
+      // Shadow Boxing - All 8 Participants
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[0], // UCSC - Thunder
+        facultyId: facultyIds['UCSC'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 10 },
+          { criteriaId: 'boxing_stance', score: 10 },
+          { criteriaId: 'leg_position_distance', score: 2 },
+          { criteriaId: 'defense', score: 7 },
+          { criteriaId: 'correct_punches', score: 20 },
+          { criteriaId: 'punches_combination', score: 20 },
+          { criteriaId: 'endurance', score: 2 },
+        ],
+        total: 71,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[1], // UCSC - Lightning
+        facultyId: facultyIds['UCSC'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 10 },
+          { criteriaId: 'boxing_stance', score: 3 },
+          { criteriaId: 'leg_position_distance', score: 10 },
+          { criteriaId: 'defense', score: 10 },
+          { criteriaId: 'correct_punches', score: 10 },
+          { criteriaId: 'punches_combination', score: 10 },
+          { criteriaId: 'endurance', score: 10 },
+        ],
+        total: 63,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[2], // Management - The Bull
+        facultyId: facultyIds['Management'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 8 },
+          { criteriaId: 'boxing_stance', score: 9 },
+          { criteriaId: 'leg_position_distance', score: 10 },
+          { criteriaId: 'defense', score: 8 },
+          { criteriaId: 'correct_punches', score: 18 },
+          { criteriaId: 'punches_combination', score: 22 },
+          { criteriaId: 'endurance', score: 9 },
+        ],
+        total: 84,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[3], // Management - Viper
+        facultyId: facultyIds['Management'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 9 },
+          { criteriaId: 'boxing_stance', score: 8 },
+          { criteriaId: 'leg_position_distance', score: 9 },
+          { criteriaId: 'defense', score: 9 },
+          { criteriaId: 'correct_punches', score: 19 },
+          { criteriaId: 'punches_combination', score: 20 },
+          { criteriaId: 'endurance', score: 8 },
+        ],
+        total: 82,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[4], // Technology - Rocket
+        facultyId: facultyIds['Technology'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 10 },
+          { criteriaId: 'boxing_stance', score: 10 },
+          { criteriaId: 'leg_position_distance', score: 10 },
+          { criteriaId: 'defense', score: 10 },
+          { criteriaId: 'correct_punches', score: 25 },
+          { criteriaId: 'punches_combination', score: 25 },
+          { criteriaId: 'endurance', score: 10 },
+        ],
+        total: 100,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[5], // Technology - Phoenix
+        facultyId: facultyIds['Technology'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 9 },
+          { criteriaId: 'boxing_stance', score: 9 },
+          { criteriaId: 'leg_position_distance', score: 9 },
+          { criteriaId: 'defense', score: 9 },
+          { criteriaId: 'correct_punches', score: 22 },
+          { criteriaId: 'punches_combination', score: 23 },
+          { criteriaId: 'endurance', score: 9 },
+        ],
+        total: 90,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[6], // Science - Titan
+        facultyId: facultyIds['Science'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 9 },
+          { criteriaId: 'boxing_stance', score: 10 },
+          { criteriaId: 'leg_position_distance', score: 10 },
+          { criteriaId: 'defense', score: 9 },
+          { criteriaId: 'correct_punches', score: 23 },
+          { criteriaId: 'punches_combination', score: 24 },
+          { criteriaId: 'endurance', score: 10 },
+        ],
+        total: 95,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[7], // Science - Blaze
+        facultyId: facultyIds['Science'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 10 },
+          { criteriaId: 'boxing_stance', score: 9 },
+          { criteriaId: 'leg_position_distance', score: 10 },
+          { criteriaId: 'defense', score: 10 },
+          { criteriaId: 'correct_punches', score: 24 },
+          { criteriaId: 'punches_combination', score: 23 },
+          { criteriaId: 'endurance', score: 9 },
+        ],
+        total: 95,
+        timestamp: Date.now(),
+      },
+      // Shadow Boxing - Nursing
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[8], // Nursing - Hawk
+        facultyId: facultyIds['Nursing'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 9 },
+          { criteriaId: 'boxing_stance', score: 8 },
+          { criteriaId: 'leg_position_distance', score: 9 },
+          { criteriaId: 'defense', score: 8 },
+          { criteriaId: 'correct_punches', score: 21 },
+          { criteriaId: 'punches_combination', score: 22 },
+          { criteriaId: 'endurance', score: 9 },
+        ],
+        total: 86,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[9], // Nursing - Storm
+        facultyId: facultyIds['Nursing'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 10 },
+          { criteriaId: 'boxing_stance', score: 9 },
+          { criteriaId: 'leg_position_distance', score: 10 },
+          { criteriaId: 'defense', score: 9 },
+          { criteriaId: 'correct_punches', score: 23 },
+          { criteriaId: 'punches_combination', score: 24 },
+          { criteriaId: 'endurance', score: 10 },
+        ],
+        total: 95,
+        timestamp: Date.now(),
+      },
+      // Punching Bag - All Faculties
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[0], // UCSC - Thunder
+        facultyId: facultyIds['UCSC'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 18 },
+          { criteriaId: 'speed', score: 15 },
+          { criteriaId: 'technique_tactics', score: 25 },
+          { criteriaId: 'combination_punches', score: 18 },
+          { criteriaId: 'endurance', score: 8 },
+        ],
+        total: 84,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[1], // UCSC - Lightning
+        facultyId: facultyIds['UCSC'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 16 },
+          { criteriaId: 'speed', score: 18 },
+          { criteriaId: 'technique_tactics', score: 22 },
+          { criteriaId: 'combination_punches', score: 15 },
+          { criteriaId: 'endurance', score: 7 },
+        ],
+        total: 78,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[4], // Technology - Rocket
+        facultyId: facultyIds['Technology'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 19 },
+          { criteriaId: 'speed', score: 17 },
+          { criteriaId: 'technique_tactics', score: 28 },
+          { criteriaId: 'combination_punches', score: 19 },
+          { criteriaId: 'endurance', score: 9 },
+        ],
+        total: 92,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[5], // Technology - Phoenix
+        facultyId: facultyIds['Technology'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 17 },
+          { criteriaId: 'speed', score: 16 },
+          { criteriaId: 'technique_tactics', score: 24 },
+          { criteriaId: 'combination_punches', score: 17 },
+          { criteriaId: 'endurance', score: 8 },
+        ],
+        total: 82,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[2], // Management - The Bull
+        facultyId: facultyIds['Management'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 20 },
+          { criteriaId: 'speed', score: 14 },
+          { criteriaId: 'technique_tactics', score: 26 },
+          { criteriaId: 'combination_punches', score: 16 },
+          { criteriaId: 'endurance', score: 9 },
+        ],
+        total: 85,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[3], // Management - Viper
+        facultyId: facultyIds['Management'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 15 },
+          { criteriaId: 'speed', score: 19 },
+          { criteriaId: 'technique_tactics', score: 23 },
+          { criteriaId: 'combination_punches', score: 18 },
+          { criteriaId: 'endurance', score: 7 },
+        ],
+        total: 82,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[6], // Science - Titan
+        facultyId: facultyIds['Science'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 18 },
+          { criteriaId: 'speed', score: 16 },
+          { criteriaId: 'technique_tactics', score: 27 },
+          { criteriaId: 'combination_punches', score: 17 },
+          { criteriaId: 'endurance', score: 9 },
+        ],
+        total: 87,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[7], // Science - Blaze
+        facultyId: facultyIds['Science'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 17 },
+          { criteriaId: 'speed', score: 18 },
+          { criteriaId: 'technique_tactics', score: 25 },
+          { criteriaId: 'combination_punches', score: 16 },
+          { criteriaId: 'endurance', score: 8 },
+        ],
+        total: 84,
+        timestamp: Date.now(),
+      },
+      // Punching Bag - Nursing
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[8], // Nursing - Hawk
+        facultyId: facultyIds['Nursing'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 16 },
+          { criteriaId: 'speed', score: 17 },
+          { criteriaId: 'technique_tactics', score: 26 },
+          { criteriaId: 'combination_punches', score: 16 },
+          { criteriaId: 'endurance', score: 8 },
+        ],
+        total: 83,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[9], // Nursing - Storm
+        facultyId: facultyIds['Nursing'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 18 },
+          { criteriaId: 'speed', score: 18 },
+          { criteriaId: 'technique_tactics', score: 27 },
+          { criteriaId: 'combination_punches', score: 18 },
+          { criteriaId: 'endurance', score: 9 },
+        ],
+        total: 90,
+        timestamp: Date.now(),
+      },
+      // Skipping - One per faculty
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[1], // UCSC - Lightning
+        facultyId: facultyIds['UCSC'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 4 },
+          { criteriaId: 'balance', score: 1 },
+          { criteriaId: 'endurance', score: 10 },
+          { criteriaId: 'speed', score: 10 },
+          { criteriaId: 'continuity', score: 10 },
+          { criteriaId: 'skill_variation', score: 10 },
+        ],
+        total: 45,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[5], // Technology - Phoenix
+        facultyId: facultyIds['Technology'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 20 },
+          { criteriaId: 'balance', score: 2 },
+          { criteriaId: 'endurance', score: 20 },
+          { criteriaId: 'speed', score: 2 },
+          { criteriaId: 'continuity', score: 16 },
+          { criteriaId: 'skill_variation', score: 0 },
+        ],
+        total: 60,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[2], // Management - The Bull
+        facultyId: facultyIds['Management'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 15 },
+          { criteriaId: 'balance', score: 8 },
+          { criteriaId: 'endurance', score: 18 },
+          { criteriaId: 'speed', score: 8 },
+          { criteriaId: 'continuity', score: 25 },
+          { criteriaId: 'skill_variation', score: 8 },
+        ],
+        total: 82,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[6], // Science - Titan
+        facultyId: facultyIds['Science'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 18 },
+          { criteriaId: 'balance', score: 9 },
+          { criteriaId: 'endurance', score: 19 },
+          { criteriaId: 'speed', score: 9 },
+          { criteriaId: 'continuity', score: 28 },
+          { criteriaId: 'skill_variation', score: 9 },
+        ],
+        total: 92,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[8], // Nursing - Hawk
+        facultyId: facultyIds['Nursing'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 17 },
+          { criteriaId: 'balance', score: 8 },
+          { criteriaId: 'endurance', score: 17 },
+          { criteriaId: 'speed', score: 8 },
+          { criteriaId: 'continuity', score: 26 },
+          { criteriaId: 'skill_variation', score: 9 },
+        ],
+        total: 85,
+        timestamp: Date.now(),
+      },
+      // Boxing Combat - All Faculties
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[0], // UCSC - Thunder
+        facultyId: facultyIds['UCSC'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 9 },
+          { criteriaId: 'punching_technique_tactics', score: 18 },
+          { criteriaId: 'defense', score: 9 },
+          { criteriaId: 'footwork', score: 4 },
+          { criteriaId: 'combination_punching', score: 9 },
+          { criteriaId: 'endurance', score: 9 },
+          { criteriaId: 'distance_management', score: 9 },
+          { criteriaId: 'reading_the_opponent', score: 4 },
+          { criteriaId: 'domination', score: 9 },
+          { criteriaId: 'protecting_the_head', score: 9 },
+        ],
+        total: 89,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[1], // UCSC - Lightning
+        facultyId: facultyIds['UCSC'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 8 },
+          { criteriaId: 'punching_technique_tactics', score: 17 },
+          { criteriaId: 'defense', score: 8 },
+          { criteriaId: 'footwork', score: 4 },
+          { criteriaId: 'combination_punching', score: 8 },
+          { criteriaId: 'endurance', score: 8 },
+          { criteriaId: 'distance_management', score: 8 },
+          { criteriaId: 'reading_the_opponent', score: 4 },
+          { criteriaId: 'domination', score: 8 },
+          { criteriaId: 'protecting_the_head', score: 8 },
+        ],
+        total: 81,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[4], // Technology - Rocket
+        facultyId: facultyIds['Technology'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 10 },
+          { criteriaId: 'punching_technique_tactics', score: 19 },
+          { criteriaId: 'defense', score: 10 },
+          { criteriaId: 'footwork', score: 5 },
+          { criteriaId: 'combination_punching', score: 10 },
+          { criteriaId: 'endurance', score: 10 },
+          { criteriaId: 'distance_management', score: 10 },
+          { criteriaId: 'reading_the_opponent', score: 5 },
+          { criteriaId: 'domination', score: 10 },
+          { criteriaId: 'protecting_the_head', score: 10 },
+        ],
+        total: 99,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[5], // Technology - Phoenix
+        facultyId: facultyIds['Technology'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 9 },
+          { criteriaId: 'punching_technique_tactics', score: 18 },
+          { criteriaId: 'defense', score: 9 },
+          { criteriaId: 'footwork', score: 4 },
+          { criteriaId: 'combination_punching', score: 9 },
+          { criteriaId: 'endurance', score: 9 },
+          { criteriaId: 'distance_management', score: 9 },
+          { criteriaId: 'reading_the_opponent', score: 4 },
+          { criteriaId: 'domination', score: 9 },
+          { criteriaId: 'protecting_the_head', score: 9 },
+        ],
+        total: 89,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[2], // Management - The Bull
+        facultyId: facultyIds['Management'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 8 },
+          { criteriaId: 'punching_technique_tactics', score: 16 },
+          { criteriaId: 'defense', score: 8 },
+          { criteriaId: 'footwork', score: 4 },
+          { criteriaId: 'combination_punching', score: 8 },
+          { criteriaId: 'endurance', score: 8 },
+          { criteriaId: 'distance_management', score: 8 },
+          { criteriaId: 'reading_the_opponent', score: 3 },
+          { criteriaId: 'domination', score: 8 },
+          { criteriaId: 'protecting_the_head', score: 8 },
+        ],
+        total: 79,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[3], // Management - Viper
+        facultyId: facultyIds['Management'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 9 },
+          { criteriaId: 'punching_technique_tactics', score: 17 },
+          { criteriaId: 'defense', score: 9 },
+          { criteriaId: 'footwork', score: 4 },
+          { criteriaId: 'combination_punching', score: 9 },
+          { criteriaId: 'endurance', score: 9 },
+          { criteriaId: 'distance_management', score: 9 },
+          { criteriaId: 'reading_the_opponent', score: 4 },
+          { criteriaId: 'domination', score: 9 },
+          { criteriaId: 'protecting_the_head', score: 9 },
+        ],
+        total: 88,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[6], // Science - Titan
+        facultyId: facultyIds['Science'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 10 },
+          { criteriaId: 'punching_technique_tactics', score: 20 },
+          { criteriaId: 'defense', score: 10 },
+          { criteriaId: 'footwork', score: 5 },
+          { criteriaId: 'combination_punching', score: 10 },
+          { criteriaId: 'endurance', score: 10 },
+          { criteriaId: 'distance_management', score: 10 },
+          { criteriaId: 'reading_the_opponent', score: 5 },
+          { criteriaId: 'domination', score: 10 },
+          { criteriaId: 'protecting_the_head', score: 10 },
+        ],
+        total: 100,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[7], // Science - Blaze
+        facultyId: facultyIds['Science'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 9 },
+          { criteriaId: 'punching_technique_tactics', score: 18 },
+          { criteriaId: 'defense', score: 9 },
+          { criteriaId: 'footwork', score: 5 },
+          { criteriaId: 'combination_punching', score: 9 },
+          { criteriaId: 'endurance', score: 9 },
+          { criteriaId: 'distance_management', score: 9 },
+          { criteriaId: 'reading_the_opponent', score: 4 },
+          { criteriaId: 'domination', score: 9 },
+          { criteriaId: 'protecting_the_head', score: 9 },
+        ],
+        total: 90,
+        timestamp: Date.now(),
+      },
+      // Boxing Combat - Nursing
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[8], // Nursing - Hawk
+        facultyId: facultyIds['Nursing'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 9 },
+          { criteriaId: 'punching_technique_tactics', score: 17 },
+          { criteriaId: 'defense', score: 8 },
+          { criteriaId: 'footwork', score: 4 },
+          { criteriaId: 'combination_punching', score: 9 },
+          { criteriaId: 'endurance', score: 9 },
+          { criteriaId: 'distance_management', score: 8 },
+          { criteriaId: 'reading_the_opponent', score: 4 },
+          { criteriaId: 'domination', score: 8 },
+          { criteriaId: 'protecting_the_head', score: 9 },
+        ],
+        total: 85,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[9], // Nursing - Storm
+        facultyId: facultyIds['Nursing'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 9 },
+          { criteriaId: 'punching_technique_tactics', score: 19 },
+          { criteriaId: 'defense', score: 9 },
+          { criteriaId: 'footwork', score: 5 },
+          { criteriaId: 'combination_punching', score: 10 },
+          { criteriaId: 'endurance', score: 10 },
+          { criteriaId: 'distance_management', score: 9 },
+          { criteriaId: 'reading_the_opponent', score: 5 },
+          { criteriaId: 'domination', score: 9 },
+          { criteriaId: 'protecting_the_head', score: 9 },
+        ],
+        total: 94,
+        timestamp: Date.now(),
+      },
+    ];
+
+    for (const score of dummyScores) {
+      await addDoc(collection(db, 'scores'), score);
+    }
+    console.log(`✓ Created ${dummyScores.length} dummy scores`);
 
     console.log('\n✅ Data seeding completed successfully!');
     console.log('\n📌 Login PINs:');

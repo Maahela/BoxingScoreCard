@@ -36,13 +36,7 @@ function AppRoutes() {
         element={
           auth.isAuthenticated ? (
             <Navigate
-              to={
-                auth.role === 'admin'
-                  ? '/admin'
-                  : auth.role === 'invigilator'
-                  ? '/invigilator'
-                  : '/display'
-              }
+              to={auth.role === 'admin' ? '/admin' : '/invigilator'}
               replace
             />
           ) : (
@@ -66,14 +60,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/display"
-        element={
-          <ProtectedRoute allowedRoles={['display']}>
-            <DisplayScreen />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/display" element={<DisplayScreen />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
