@@ -53,10 +53,10 @@ export function Login() {
     <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
       <div className="card max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Boxing Scoreboard
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Interfaculty Freshers' Boxing Tournament 2025
           </h1>
-          <p className="text-gray-600">Interfaculty Boxing Freshers 2024</p>
+          <p className="text-gray-600">University of Colombo</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
