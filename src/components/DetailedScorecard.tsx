@@ -86,7 +86,11 @@ export function DetailedScorecard({
               <tr className="bg-gray-700">
                 <th
                   className="border border-gray-600 px-4 py-2 text-left text-white"
-                  style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
+                  style={{
+                    width: '250px',
+                    minWidth: '250px',
+                    maxWidth: '250px',
+                  }}
                 >
                   Criteria / Max Points
                 </th>
@@ -113,7 +117,9 @@ export function DetailedScorecard({
                                   minWidth: '100px',
                                 }}
                               >
-                                <div className="font-semibold">{faculty.name}</div>
+                                <div className="font-semibold">
+                                  {faculty.name}
+                                </div>
                                 <div className="font-normal mt-1">
                                   {participant?.alias ||
                                     participant?.name ||
@@ -133,7 +139,9 @@ export function DetailedScorecard({
                                 opacity: 0.3,
                               }}
                             >
-                              <div className="font-semibold">{faculty.name}</div>
+                              <div className="font-semibold">
+                                {faculty.name}
+                              </div>
                               <div className="font-normal mt-1">-</div>
                             </th>
                           ))}
@@ -152,7 +160,9 @@ export function DetailedScorecard({
                                 opacity: 0.3,
                               }}
                             >
-                              <div className="font-semibold">{faculty.name}</div>
+                              <div className="font-semibold">
+                                {faculty.name}
+                              </div>
                               <div className="font-normal mt-1">-</div>
                             </th>
                           ))}
@@ -189,7 +199,14 @@ export function DetailedScorecard({
                         key={criteriaIdx}
                         className="bg-gray-800 hover:bg-gray-750"
                       >
-                        <td className="border border-gray-600 px-4 py-2 text-white" style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}>
+                        <td
+                          className="border border-gray-600 px-4 py-2 text-white"
+                          style={{
+                            width: '250px',
+                            minWidth: '250px',
+                            maxWidth: '250px',
+                          }}
+                        >
                           <div className="flex justify-between">
                             <span>
                               {criteria.criteriaId
@@ -262,7 +279,14 @@ export function DetailedScorecard({
 
               {/* Totals Row */}
               <tr className="bg-gray-900 font-bold">
-                <td className="border border-gray-600 px-4 py-2 text-white" style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}>
+                <td
+                  className="border border-gray-600 px-4 py-2 text-white"
+                  style={{
+                    width: '250px',
+                    minWidth: '250px',
+                    maxWidth: '250px',
+                  }}
+                >
                   TOTAL
                 </td>
                 {sortedFaculties.map((faculty) => {
@@ -302,7 +326,14 @@ export function DetailedScorecard({
               {/* Average Row (for 2-participant events) */}
               {event.participantsRequired === 2 && (
                 <tr className="bg-yellow-500 font-bold">
-                  <td className="border border-gray-600 px-4 py-2 text-black" style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}>
+                  <td
+                    className="border border-gray-600 px-4 py-2 text-black"
+                    style={{
+                      width: '250px',
+                      minWidth: '250px',
+                      maxWidth: '250px',
+                    }}
+                  >
                     AVERAGE
                   </td>
                   {sortedFaculties.map((faculty) => {
@@ -344,7 +375,10 @@ export function DetailedScorecard({
       <table className="w-full border-collapse text-sm">
         <tfoot>
           <tr className="bg-blue-600">
-            <th className="border border-gray-600 px-4 py-3 text-left text-white font-bold text-lg" style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}>
+            <th
+              className="border border-gray-600 px-4 py-3 text-left text-white font-bold text-lg"
+              style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
+            >
               FINAL TOTAL
             </th>
             {sortedFaculties.map((faculty) => {
