@@ -65,32 +65,36 @@ export function CombatScoreCard({
   };
 
   return (
-    <div className="card">
+    <div className="boxing-panel p-6 md:p-8">
       {/* Fighter Headers */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        <div className="text-center p-4 bg-blue-50 border-2 border-blue-500 rounded-lg">
-          <div className="text-sm text-gray-500 mb-1">Fighter A</div>
-          <div className="text-xl font-bold text-blue-900">
+      <div className="grid grid-cols-2 gap-6 mb-8">
+        <div className="text-center p-6 bg-gradient-to-br from-red-900/40 to-red-800/30 border border-red-500/30 rounded-xl backdrop-blur-sm">
+          <div className="text-sm text-gray-300 mb-2 tracking-wider uppercase font-semibold">
+            Fighter A
+          </div>
+          <div className="text-2xl md:text-3xl font-bold text-white boxing-title">
             {participant1.alias || participant1.name}
           </div>
           {faculty1 && (
             <div
-              className="text-sm font-semibold mt-1"
-              style={{ color: faculty1.colorHex }}
+              className="text-sm font-semibold mt-2 tracking-wide"
+              style={{ color: faculty1.colorHex || '#EDEDED' }}
             >
               {faculty1.name}
             </div>
           )}
         </div>
-        <div className="text-center p-4 bg-green-50 border-2 border-green-500 rounded-lg">
-          <div className="text-sm text-gray-500 mb-1">Fighter B</div>
-          <div className="text-xl font-bold text-green-900">
+        <div className="text-center p-6 bg-gradient-to-br from-blue-900/40 to-blue-800/30 border border-blue-500/30 rounded-xl backdrop-blur-sm">
+          <div className="text-sm text-gray-300 mb-2 tracking-wider uppercase font-semibold">
+            Fighter B
+          </div>
+          <div className="text-2xl md:text-3xl font-bold text-white boxing-title">
             {participant2.alias || participant2.name}
           </div>
           {faculty2 && (
             <div
-              className="text-sm font-semibold mt-1"
-              style={{ color: faculty2.colorHex }}
+              className="text-sm font-semibold mt-2 tracking-wide"
+              style={{ color: faculty2.colorHex || '#EDEDED' }}
             >
               {faculty2.name}
             </div>
@@ -99,7 +103,7 @@ export function CombatScoreCard({
       </div>
 
       {/* Criteria Rows */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {criteria.map((criterion) => {
           const score1 =
             scores1.find((s) => s.criteriaId === criterion.id)?.score || 0;
@@ -109,18 +113,18 @@ export function CombatScoreCard({
           return (
             <div
               key={criterion.id}
-              className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center py-3 px-2 bg-gray-50 rounded-lg border border-gray-200"
+              className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center py-4 px-4 bg-black/20 rounded-lg border border-white/10 backdrop-blur-sm"
             >
               {/* Fighter A Controls */}
               <div className="flex justify-end items-center gap-3">
-                <div className="text-2xl font-bold text-blue-600 min-w-[3rem] text-center">
+                <div className="text-2xl md:text-3xl font-bold text-red-400 min-w-[3rem] text-center">
                   {score1}
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleDecrement(criterion.id, score1, true)}
                     disabled={disabled || score1 === 0}
-                    className="w-10 h-10 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white font-bold rounded-lg transition-colors text-xl"
+                    className="score-control w-12 h-12 font-bold rounded-lg text-xl disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     −
                   </button>
@@ -134,7 +138,7 @@ export function CombatScoreCard({
                       )
                     }
                     disabled={disabled || score1 >= criterion.maxPoints}
-                    className="w-10 h-10 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-bold rounded-lg transition-colors text-xl"
+                    className="score-control w-12 h-12 font-bold rounded-lg text-xl disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     +
                   </button>
@@ -142,12 +146,12 @@ export function CombatScoreCard({
               </div>
 
               {/* Criterion Label */}
-              <div className="text-center min-w-[200px]">
-                <div className="font-semibold text-gray-800">
+              <div className="text-center min-w-[180px] md:min-w-[220px]">
+                <div className="criteria-label text-base md:text-lg">
                   {criterion.label}
                 </div>
-                <div className="text-sm text-gray-500">
-                  ({criterion.maxPoints})
+                <div className="text-sm text-gray-400 mt-1">
+                  Max: {criterion.maxPoints}
                 </div>
               </div>
 
@@ -157,7 +161,7 @@ export function CombatScoreCard({
                   <button
                     onClick={() => handleDecrement(criterion.id, score2, false)}
                     disabled={disabled || score2 === 0}
-                    className="w-10 h-10 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white font-bold rounded-lg transition-colors text-xl"
+                    className="score-control w-12 h-12 font-bold rounded-lg text-xl disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     −
                   </button>
@@ -171,12 +175,12 @@ export function CombatScoreCard({
                       )
                     }
                     disabled={disabled || score2 >= criterion.maxPoints}
-                    className="w-10 h-10 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-bold rounded-lg transition-colors text-xl"
+                    className="score-control w-12 h-12 font-bold rounded-lg text-xl disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     +
                   </button>
                 </div>
-                <div className="text-2xl font-bold text-green-600 min-w-[3rem] text-center">
+                <div className="text-2xl md:text-3xl font-bold text-blue-400 min-w-[3rem] text-center">
                   {score2}
                 </div>
               </div>
@@ -186,14 +190,22 @@ export function CombatScoreCard({
       </div>
 
       {/* Current Scores Footer */}
-      <div className="grid grid-cols-2 gap-6 mt-6">
-        <div className="p-4 bg-blue-100 border-2 border-blue-500 rounded-lg text-center">
-          <div className="text-sm text-gray-600 mb-1">Current Score</div>
-          <div className="text-4xl font-bold text-blue-700">{total1}</div>
+      <div className="grid grid-cols-2 gap-6 mt-8">
+        <div className="p-6 bg-gradient-to-br from-red-900/30 to-red-800/20 border border-red-500/40 rounded-xl text-center backdrop-blur-sm">
+          <div className="text-sm text-gray-300 mb-2 tracking-wider uppercase">
+            Current Score
+          </div>
+          <div className="text-5xl font-bold text-white boxing-title">
+            {total1}
+          </div>
         </div>
-        <div className="p-4 bg-green-100 border-2 border-green-500 rounded-lg text-center">
-          <div className="text-sm text-gray-600 mb-1">Current Score</div>
-          <div className="text-4xl font-bold text-green-700">{total2}</div>
+        <div className="p-6 bg-gradient-to-br from-blue-900/30 to-blue-800/20 border border-blue-500/40 rounded-xl text-center backdrop-blur-sm">
+          <div className="text-sm text-gray-300 mb-2 tracking-wider uppercase">
+            Current Score
+          </div>
+          <div className="text-5xl font-bold text-white boxing-title">
+            {total2}
+          </div>
         </div>
       </div>
     </div>

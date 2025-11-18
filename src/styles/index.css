@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Montserrat:wght@500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,10 +7,52 @@
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900;
+    font-family: 'Montserrat', sans-serif;
   }
 }
 
 @layer components {
+  /* Boxing Event Typography */
+  .boxing-title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: white;
+  }
+
+  .boxing-panel {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+  }
+
+  .criteria-label {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    color: #ededed;
+  }
+
+  .score-control {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: white;
+    transition: all 180ms ease;
+  }
+
+  .score-control:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .score-control:active {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(0.98);
+  }
+
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
   }

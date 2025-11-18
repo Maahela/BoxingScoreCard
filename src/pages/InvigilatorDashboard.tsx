@@ -366,62 +366,101 @@ export function InvigilatorDashboard() {
     : null;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 pb-32">
-      <header className="mb-6">
-        <button
-          onClick={() => {
-            setSelectedEvent(null);
-            setSelectedParticipant(null);
-            setCombatParticipant2(null);
-          }}
-          className="text-blue-600 mb-2"
+    <div
+      className={`min-h-screen p-4 pb-32 ${
+        isCombat ? 'bg-gray-900' : 'bg-gray-100'
+      }`}
+    >
+      {/* Combat Header */}
+      {isCombat && (
+        <header className="mb-6">
+          <button
+            onClick={() => {
+              setSelectedEvent(null);
+              setSelectedParticipant(null);
+              setCombatParticipant2(null);
+            }}
+            className="text-white bg-black/30 px-4 py-2 rounded-lg border border-white/20 hover:bg-black/50 transition-all mb-2"
+          >
+            ← Back to Events
+          </button>
+          <h1 className="text-3xl md:text-4xl font-bold boxing-title text-white drop-shadow-lg">
+            {selectedEvent.name}
+          </h1>
+        </header>
+      )}
+
+      {/* Non-Combat Header */}
+      {!isCombat && (
+        <header className="mb-6">
+          <button
+            onClick={() => {
+              setSelectedEvent(null);
+              setSelectedParticipant(null);
+              setCombatParticipant2(null);
+            }}
+            className="text-blue-600 mb-2"
+          >
+            ← Back to Events
+          </button>
+          <h1 className="text-xl font-bold">{selectedEvent.name}</h1>
+        </header>
+      )}
+
+      {/* Display active participants */}
+      <div className={`mt-4 space-y-2 ${isCombat ? 'max-w-5xl mx-auto' : ''}`}>
+        <div
+          className={`p-3 ${
+            isCombat ? 'bg-black/30 border-white/20' : 'bg-white'
+          } border-2 border-blue-500 rounded-lg ${
+            isCombat ? 'backdrop-blur-sm' : ''
+          }`}
         >
-          ← Back to Events
-        </button>
-        <h1 className="text-xl font-bold">{selectedEvent.name}</h1>
-
-        {/* Display active participants */}
-        <div className="mt-4 space-y-2">
-          <div className="p-3 bg-white border-2 border-blue-500 rounded-lg">
-            <div className="text-xs text-gray-500 mb-1">
-              {isCombat ? 'Participant 1' : 'Active Participant'}
-            </div>
-            <div className="font-semibold text-lg">
-              {selectedParticipant.alias || selectedParticipant.name}
-            </div>
-            {faculty && (
-              <div
-                className="text-sm font-medium"
-                style={{ color: faculty.colorHex }}
-              >
-                {faculty.name}
-              </div>
-            )}
+          <div
+            className={`text-xs mb-1 ${
+              isCombat ? 'text-gray-300' : 'text-gray-500'
+            }`}
+          >
+            {isCombat ? 'Participant 1' : 'Active Participant'}
           </div>
-
-          {isCombat && combatParticipant2 && (
-            <div className="p-3 bg-white border-2 border-green-500 rounded-lg">
-              <div className="text-xs text-gray-500 mb-1">Participant 2</div>
-              <div className="font-semibold text-lg">
-                {combatParticipant2.alias || combatParticipant2.name}
-              </div>
-              {combatFaculty2 && (
-                <div
-                  className="text-sm font-medium"
-                  style={{ color: combatFaculty2.colorHex }}
-                >
-                  {combatFaculty2.name}
-                </div>
-              )}
+          <div
+            className={`font-semibold text-lg ${isCombat ? 'text-white' : ''}`}
+          >
+            {selectedParticipant.alias || selectedParticipant.name}
+          </div>
+          {faculty && (
+            <div
+              className={`text-sm font-medium ${
+                isCombat ? 'text-gray-200' : ''
+              }`}
+              style={{ color: isCombat ? '#EDEDED' : faculty.colorHex }}
+            >
+              {faculty.name}
             </div>
           )}
         </div>
-      </header>
+
+        {isCombat && combatParticipant2 && (
+          <div className="p-3 bg-black/30 border-2 border-green-500 rounded-lg backdrop-blur-sm border-white/20">
+            <div className="text-xs text-gray-300 mb-1">Participant 2</div>
+            <div className="font-semibold text-lg text-white">
+              {combatParticipant2.alias || combatParticipant2.name}
+            </div>
+            {combatFaculty2 && (
+              <div
+                className="text-sm font-medium text-gray-200"
+                style={{ color: '#EDEDED' }}
+              >
+                {combatFaculty2.name}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {template && (
-        <>
+        <div className={isCombat ? 'max-w-5xl mx-auto' : ''}>
           {isCombat && combatParticipant2 ? (
-            /* Combat: Two-column side-by-side scoring layout */
             <CombatScoreCard
               criteria={template.criteria}
               participant1={selectedParticipant}
@@ -435,7 +474,6 @@ export function InvigilatorDashboard() {
               disabled={submitted}
             />
           ) : (
-            /* Non-combat: Standard vertical scoring */
             <div className="card mb-4">
               <h3 className="text-lg font-bold mb-3 text-blue-600">
                 Criteria Scores
@@ -448,19 +486,31 @@ export function InvigilatorDashboard() {
               />
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* Fixed Submit Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg">
+      <div
+        className={`fixed bottom-0 left-0 right-0 p-4 border-t shadow-lg z-20 ${
+          isCombat ? 'bg-black/70 backdrop-blur-lg border-white/20' : 'bg-white'
+        }`}
+      >
         {submitted ? (
-          <div className="btn btn-success w-full text-lg pointer-events-none">
+          <div
+            className={`btn w-full text-lg pointer-events-none ${
+              isCombat ? 'bg-green-600 text-white' : 'btn-success'
+            }`}
+          >
             ✓ Submitted Successfully!
           </div>
         ) : (
           <button
             onClick={handleSubmit}
-            className="btn btn-primary w-full text-lg"
+            className={`btn w-full text-lg font-bold ${
+              isCombat
+                ? 'bg-gradient-to-r from-red-600 to-blue-600 text-white hover:from-red-700 hover:to-blue-700 py-4 text-xl'
+                : 'btn-primary'
+            }`}
           >
             Submit {isCombat && combatParticipant2 ? 'Both ' : ''}Scores
           </button>
