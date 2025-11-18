@@ -84,6 +84,12 @@ service cloud.firestore {
       allow write: if hasRole('admin'); // Only admin can manually update
     }
 
+    // Active Participants collection (for live participant selection)
+    match /activeParticipants/{docId} {
+      allow read: if true; // Everyone can read active participants (invigilators need this)
+      allow write: if true; // TEMPORARY: Allow for testing - change to hasRole('admin') after testing
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

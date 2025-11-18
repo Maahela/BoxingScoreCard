@@ -25,6 +25,7 @@ import type {
   Assignment,
   PinAuth,
   FacultyTotals,
+  ActiveParticipants,
 } from '@/types';
 
 // Generic CRUD helpers
@@ -235,4 +236,57 @@ export async function calculateFacultyTotals(): Promise<FacultyTotals[]> {
   });
 
   return Array.from(totalsMap.values());
+}
+
+// Active Participants helpers
+export async function getActiveParticipants(): Promise<ActiveParticipants | null> {
+  const docs = await getDocs(collection(db, 'activeParticipants'));
+  if (docs.empty) {
+    return null;
+  }
+  const data = docs.docs[0].data();
+  return {
+    id: docs.docs[0].id,
+    skipping: data.skipping || null,
+    shadowBoxing: data.shadowBoxing || null,
+    punchingBag: data.punchingBag || null,
+    combat: {
+      participant1: data.combat?.participant1 || null,
+      participant2: data.combat?.participant2 || null,
+    },
+  } as ActiveParticipants;
+}
+
+export async function setActiveParticipants(
+  data: Omit<ActiveParticipants, 'id'>
+): Promise<void> {
+  const docs = await getDocs(collection(db, 'activeParticipants'));
+  if (docs.empty) {
+    await addDoc(collection(db, 'activeParticipants'), data);
+  } else {
+    const docRef = doc(db, 'activeParticipants', docs.docs[0].id);
+    await updateDoc(docRef, data);
+  }
+}
+
+export function subscribeToActiveParticipants(
+  callback: (data: ActiveParticipants | null) => void
+) {
+  return onSnapshot(collection(db, 'activeParticipants'), (snapshot) => {
+    if (snapshot.empty) {
+      callback(null);
+    } else {
+      const docData = snapshot.docs[0].data();
+      callback({
+        id: snapshot.docs[0].id,
+        skipping: docData.skipping || null,
+        shadowBoxing: docData.shadowBoxing || null,
+        punchingBag: docData.punchingBag || null,
+        combat: {
+          participant1: docData.combat?.participant1 || null,
+          participant2: docData.combat?.participant2 || null,
+        },
+      } as ActiveParticipants);
+    }
+  });
 }

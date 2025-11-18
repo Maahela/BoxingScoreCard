@@ -113,3 +113,14 @@ export interface ScoreInputState {
   score: number;
   maxPoints: number;
 }
+
+export interface ActiveParticipants {
+  id?: string;
+  skipping: string | null;
+  shadowBoxing: string | null;
+  punchingBag: string | null;
+  combat: {
+    participant1: string | null;
+    participant2: string | null;
+  };
+}

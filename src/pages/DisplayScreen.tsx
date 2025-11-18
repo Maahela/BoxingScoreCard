@@ -13,7 +13,9 @@ export function DisplayScreen() {
   const { participants } = useRealtimeParticipants();
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const [view, setView] = useState<'summary' | 'phase1' | 'phase2' | 'detailed'>('phase1');
+  const [view, setView] = useState<
+    'summary' | 'phase1' | 'phase2' | 'detailed'
+  >('phase1');
 
   const handleBackToLogin = () => {
     logout();

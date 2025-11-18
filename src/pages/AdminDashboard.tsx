@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -16,6 +16,7 @@ import {
   updateDocument,
   deleteDocument,
 } from '@/lib/firestoreHelpers';
+import { ActiveParticipantsPanel } from '@/components/ActiveParticipantsPanel';
 import type {
   Faculty,
   Participant,
@@ -35,8 +36,8 @@ export function AdminDashboard() {
   const { scores } = useRealtimeScores();
 
   const [activeTab, setActiveTab] = useState<
-    'faculties' | 'participants' | 'events' | 'templates' | 'scores'
-  >('faculties');
+    'active' | 'faculties' | 'participants' | 'events' | 'templates' | 'scores'
+  >('active');
 
   const handleLogout = () => {
     logout();
@@ -67,6 +68,7 @@ export function AdminDashboard() {
         <div className="bg-white rounded-lg shadow-md p-2 flex gap-2 overflow-x-auto">
           {(
             [
+              'active',
               'faculties',
               'participants',
               'events',
@@ -91,6 +93,12 @@ export function AdminDashboard() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {activeTab === 'active' && (
+          <ActiveParticipantsPanel
+            participants={participants}
+            events={events}
+          />
+        )}
         {activeTab === 'faculties' && <FacultiesPanel faculties={faculties} />}
         {activeTab === 'participants' && (
           <ParticipantsPanel

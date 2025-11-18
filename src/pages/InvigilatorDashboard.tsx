@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   useRealtimeEvents,
   useRealtimeFaculties,
   useRealtimeParticipants,
-  useRealtimeTemplates,
 } from '@/hooks/useRealtimeData';
+import { useActiveParticipants } from '@/hooks/useActiveParticipants';
 import { getDocument, addScore } from '@/lib/firestoreHelpers';
 import type { Event, Participant, Template, ScoreInputState } from '@/types';
 import { CriteriaList } from '@/components/CriteriaList';
-import { ParticipantCard } from '@/components/ParticipantCard';
 
 export function InvigilatorDashboard() {
   const { auth, logout } = useAuth();
@@ -18,18 +17,63 @@ export function InvigilatorDashboard() {
   const { events } = useRealtimeEvents();
   const { faculties } = useRealtimeFaculties();
   const { participants } = useRealtimeParticipants();
-  const { templates } = useRealtimeTemplates();
+  const { activeParticipants } = useActiveParticipants();
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedFaculty, setSelectedFaculty] = useState<string | null>(null);
   const [selectedParticipant, setSelectedParticipant] =
     useState<Participant | null>(null);
+  const [combatParticipant2, setCombatParticipant2] =
+    useState<Participant | null>(null);
   const [scores, setScores] = useState<ScoreInputState[]>([]);
+  const [scores2, setScores2] = useState<ScoreInputState[]>([]);
   const [template, setTemplate] = useState<Template | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [scoredParticipants, setScoredParticipants] = useState<Set<string>>(
-    new Set()
-  );
+
+  // Automatically load active participant when event is selected
+  useEffect(() => {
+    if (!selectedEvent || !activeParticipants) return;
+
+    let activeParticipantId: string | null = null;
+    let activeParticipant2Id: string | null = null;
+
+    // Determine which active participant to use based on event
+    if (selectedEvent.name === 'Skipping') {
+      activeParticipantId = activeParticipants.skipping;
+    } else if (selectedEvent.name === 'Shadow Boxing') {
+      activeParticipantId = activeParticipants.shadowBoxing;
+    } else if (selectedEvent.name === 'Punching Bag') {
+      activeParticipantId = activeParticipants.punchingBag;
+    } else if (selectedEvent.name === 'Boxing Combat') {
+      activeParticipantId = activeParticipants.combat.participant1;
+      activeParticipant2Id = activeParticipants.combat.participant2;
+    }
+
+    // Load participant 1
+    if (activeParticipantId) {
+      const participant = participants.find(
+        (p) => p.id === activeParticipantId
+      );
+      if (participant) {
+        setSelectedParticipant(participant);
+        setSelectedFaculty(participant.facultyId);
+      }
+    } else {
+      setSelectedParticipant(null);
+    }
+
+    // Load participant 2 for combat
+    if (activeParticipant2Id) {
+      const participant = participants.find(
+        (p) => p.id === activeParticipant2Id
+      );
+      if (participant) {
+        setCombatParticipant2(participant);
+      }
+    } else {
+      setCombatParticipant2(null);
+    }
+  }, [selectedEvent, activeParticipants, participants]);
 
   // Filter events assigned to this invigilator
   const assignedEvents = events.filter((e) =>
@@ -45,8 +89,8 @@ export function InvigilatorDashboard() {
     setSelectedEvent(event);
     setSelectedFaculty(null);
     setSelectedParticipant(null);
+    setCombatParticipant2(null);
     setSubmitted(false);
-    setScoredParticipants(new Set());
 
     // Load template
     const tmpl = await getDocument<Template>('templates', event.templateId);
@@ -54,24 +98,24 @@ export function InvigilatorDashboard() {
 
     // Initialize scores
     if (tmpl) {
-      setScores(
-        tmpl.criteria.map((c) => ({
-          criteriaId: c.id,
-          score: 0,
-          maxPoints: c.maxPoints,
-        }))
-      );
+      const initialScores = tmpl.criteria.map((c) => ({
+        criteriaId: c.id,
+        score: 0,
+        maxPoints: c.maxPoints,
+      }));
+      setScores(initialScores);
+      setScores2(initialScores); // For second combat participant
     }
-  };
-
-  const handleParticipantSelect = (participant: Participant) => {
-    setSelectedParticipant(participant);
-    setSelectedFaculty(participant.facultyId);
-    setSubmitted(false);
   };
 
   const handleScoreChange = (criteriaId: string, score: number) => {
     setScores((prev) =>
+      prev.map((s) => (s.criteriaId === criteriaId ? { ...s, score } : s))
+    );
+  };
+
+  const handleScore2Change = (criteriaId: string, score: number) => {
+    setScores2((prev) =>
       prev.map((s) => (s.criteriaId === criteriaId ? { ...s, score } : s))
     );
   };
@@ -89,6 +133,7 @@ export function InvigilatorDashboard() {
     const total = scores.reduce((sum, s) => sum + s.score, 0);
 
     try {
+      // Submit score for participant 1
       await addScore({
         eventId: selectedEvent.id,
         templateId: template.id,
@@ -104,23 +149,36 @@ export function InvigilatorDashboard() {
         timestamp: Date.now(),
       });
 
+      // If combat event and second participant exists, submit their score too
+      if (selectedEvent.name === 'Boxing Combat' && combatParticipant2) {
+        const total2 = scores2.reduce((sum, s) => sum + s.score, 0);
+        await addScore({
+          eventId: selectedEvent.id,
+          templateId: template.id,
+          participantId: combatParticipant2.id,
+          facultyId: combatParticipant2.facultyId,
+          invigilatorId: auth.invigilatorId,
+          roundNumber: 1,
+          criteriaScores: scores2.map((s) => ({
+            criteriaId: s.criteriaId,
+            score: s.score,
+          })),
+          total: total2,
+          timestamp: Date.now(),
+        });
+      }
+
       setSubmitted(true);
 
-      // Track scored participant
-      setScoredParticipants((prev) =>
-        new Set(prev).add(selectedParticipant.id)
-      );
-
-      // Reset scores for next participant
+      // Reset after delay
       setTimeout(() => {
-        setSelectedParticipant(null);
-        setScores(
-          template.criteria.map((c) => ({
-            criteriaId: c.id,
-            score: 0,
-            maxPoints: c.maxPoints,
-          }))
-        );
+        const initialScores = template.criteria.map((c) => ({
+          criteriaId: c.id,
+          score: 0,
+          maxPoints: c.maxPoints,
+        }));
+        setScores(initialScores);
+        setScores2(initialScores);
         setSubmitted(false);
       }, 2000);
     } catch (error) {
@@ -192,108 +250,8 @@ export function InvigilatorDashboard() {
     );
   }
 
-  // View: Participant Selection (skip for 1-participant events)
+  // View: Waiting for admin to select active participant
   if (!selectedParticipant) {
-    const eventParticipants = participants.filter((p) =>
-      p.events.includes(selectedEvent.id)
-    );
-
-    // Debug logging
-    console.log('Selected Event:', selectedEvent);
-    console.log('All Participants:', participants);
-    console.log('Filtered Event Participants:', eventParticipants);
-    console.log(
-      'Participants with events field:',
-      participants.map((p) => ({ name: p.name, events: p.events }))
-    );
-
-    // For 1-participant events (like Skipping), auto-select and go to scoring
-    if (selectedEvent.participantsRequired === 1) {
-      // Group by faculty and show one participant per faculty
-      const participantsByFaculty = new Map<string, Participant>();
-      eventParticipants.forEach((p) => {
-        // Take the first participant per faculty (admin should assign only one)
-        if (!participantsByFaculty.has(p.facultyId)) {
-          participantsByFaculty.set(p.facultyId, p);
-        }
-      });
-
-      return (
-        <div className="min-h-screen bg-gray-100 p-4">
-          <header className="mb-6">
-            <button
-              onClick={() => setSelectedEvent(null)}
-              className="text-blue-600 mb-2"
-            >
-              ← Back to Events
-            </button>
-            <h1 className="text-2xl font-bold">{selectedEvent.name}</h1>
-            <div className="mt-2 text-sm text-gray-600">
-              Phase {selectedEvent.phase} • 1 participant per faculty
-              (pre-assigned)
-            </div>
-          </header>
-
-          <div className="card">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Select Faculty to Score</h2>
-              <div className="text-sm text-gray-600">
-                Scored: {scoredParticipants.size} / {participantsByFaculty.size}
-              </div>
-            </div>
-
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-              <div className="font-semibold text-blue-800 mb-1">
-                ℹ️ Single Participant Event:
-              </div>
-              <div className="text-blue-700">
-                One participant per faculty has been pre-assigned by the admin
-                for this event.
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {Array.from(participantsByFaculty.entries()).map(
-                ([facultyId, participant]) => {
-                  const faculty = faculties.find((f) => f.id === facultyId);
-                  const isScored = scoredParticipants.has(participant.id);
-
-                  return (
-                    <div key={facultyId} className="relative">
-                      {isScored && (
-                        <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold z-10">
-                          ✓ Scored
-                        </div>
-                      )}
-                      <button
-                        onClick={() => handleParticipantSelect(participant)}
-                        className="w-full"
-                      >
-                        <ParticipantCard
-                          participant={participant}
-                          faculty={faculty}
-                          onClick={() => {}}
-                        />
-                      </button>
-                    </div>
-                  );
-                }
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // For 2-participant events, show full selection with grouping
-    const participantsByFaculty = new Map<string, Participant[]>();
-    eventParticipants.forEach((p) => {
-      if (!participantsByFaculty.has(p.facultyId)) {
-        participantsByFaculty.set(p.facultyId, []);
-      }
-      participantsByFaculty.get(p.facultyId)!.push(p);
-    });
-
     return (
       <div className="min-h-screen bg-gray-100 p-4">
         <header className="mb-6">
@@ -305,91 +263,28 @@ export function InvigilatorDashboard() {
           </button>
           <h1 className="text-2xl font-bold">{selectedEvent.name}</h1>
           <div className="mt-2 text-sm text-gray-600">
-            Phase {selectedEvent.phase} • {selectedEvent.participantsRequired}{' '}
-            participant{selectedEvent.participantsRequired > 1 ? 's' : ''} per
-            faculty
+            Phase {selectedEvent.phase}
           </div>
         </header>
 
         <div className="card">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">
-              Select Participant to Score
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">⏳</div>
+            <h2 className="text-2xl font-bold mb-2">
+              Waiting for Admin Selection
             </h2>
-            <div className="text-sm text-gray-600">
-              Scored: {scoredParticipants.size} / {eventParticipants.length}
-            </div>
-          </div>
-
-          {selectedEvent.participantsRequired === 2 && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-              <div className="font-semibold text-amber-800 mb-1">
-                ⚠️ Scoring Requirement:
-              </div>
-              <div className="text-amber-700">
-                This event requires 2 participants per faculty. Final score =
-                average of both participants.
+            <p className="text-gray-600 mb-6">
+              The admin will select the active participant
+              {selectedEvent.name === 'Boxing Combat' ? 's' : ''} for this
+              event. Your screen will update automatically.
+            </p>
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg inline-block">
+              <div className="text-sm font-medium text-blue-900">
+                {selectedEvent.name === 'Boxing Combat'
+                  ? 'Waiting for both combat participants...'
+                  : 'Waiting for participant selection...'}
               </div>
             </div>
-          )}
-
-          <div className="space-y-6">
-            {Array.from(participantsByFaculty.entries()).map(
-              ([facultyId, facultyParticipants]) => {
-                const faculty = faculties.find((f) => f.id === facultyId);
-                const scoredCount = facultyParticipants.filter((p) =>
-                  scoredParticipants.has(p.id)
-                ).length;
-                const isComplete =
-                  scoredCount >= selectedEvent.participantsRequired;
-
-                return (
-                  <div key={facultyId} className="border rounded-lg p-3">
-                    <div className="flex justify-between items-center mb-3">
-                      <div
-                        className="font-semibold"
-                        style={{ color: faculty?.colorHex }}
-                      >
-                        {faculty?.name}
-                      </div>
-                      <div className="text-sm">
-                        {isComplete ? (
-                          <span className="text-green-600 font-semibold">
-                            ✓ Complete
-                          </span>
-                        ) : (
-                          <span className="text-gray-600">
-                            {scoredCount}/{selectedEvent.participantsRequired}{' '}
-                            scored
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {facultyParticipants.map((participant) => {
-                        const isScored = scoredParticipants.has(participant.id);
-                        return (
-                          <div key={participant.id} className="relative">
-                            {isScored && (
-                              <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold z-10">
-                                ✓ Scored
-                              </div>
-                            )}
-                            <ParticipantCard
-                              participant={participant}
-                              faculty={faculty}
-                              onClick={() =>
-                                handleParticipantSelect(participant)
-                              }
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              }
-            )}
           </div>
         </div>
       </div>
@@ -398,38 +293,98 @@ export function InvigilatorDashboard() {
 
   // View: Scoring
   const faculty = faculties.find((f) => f.id === selectedFaculty);
+  const isCombat = selectedEvent.name === 'Boxing Combat';
+  const combatFaculty2 = combatParticipant2
+    ? faculties.find((f) => f.id === combatParticipant2.facultyId)
+    : null;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 pb-24">
+    <div className="min-h-screen bg-gray-100 p-4 pb-32">
       <header className="mb-6">
         <button
-          onClick={() => setSelectedParticipant(null)}
+          onClick={() => {
+            setSelectedEvent(null);
+            setSelectedParticipant(null);
+            setCombatParticipant2(null);
+          }}
           className="text-blue-600 mb-2"
         >
-          ← Back to Participants
+          ← Back to Events
         </button>
         <h1 className="text-xl font-bold">{selectedEvent.name}</h1>
-        <div className="mt-2">
-          <div className="font-semibold text-lg">
-            {selectedParticipant.name}
+
+        {/* Display active participants */}
+        <div className="mt-4 space-y-2">
+          <div className="p-3 bg-white border-2 border-blue-500 rounded-lg">
+            <div className="text-xs text-gray-500 mb-1">
+              {isCombat ? 'Participant 1' : 'Active Participant'}
+            </div>
+            <div className="font-semibold text-lg">
+              {selectedParticipant.alias || selectedParticipant.name}
+            </div>
+            {faculty && (
+              <div
+                className="text-sm font-medium"
+                style={{ color: faculty.colorHex }}
+              >
+                {faculty.name}
+              </div>
+            )}
           </div>
-          {faculty && (
-            <div className="text-sm" style={{ color: faculty.colorHex }}>
-              {faculty.name}
+
+          {isCombat && combatParticipant2 && (
+            <div className="p-3 bg-white border-2 border-green-500 rounded-lg">
+              <div className="text-xs text-gray-500 mb-1">Participant 2</div>
+              <div className="font-semibold text-lg">
+                {combatParticipant2.alias || combatParticipant2.name}
+              </div>
+              {combatFaculty2 && (
+                <div
+                  className="text-sm font-medium"
+                  style={{ color: combatFaculty2.colorHex }}
+                >
+                  {combatFaculty2.name}
+                </div>
+              )}
             </div>
           )}
         </div>
       </header>
 
       {template && (
-        <div className="card">
-          <CriteriaList
-            criteria={template.criteria}
-            scores={scores}
-            onScoreChange={handleScoreChange}
-            disabled={submitted}
-          />
-        </div>
+        <>
+          {/* Participant 1 Scoring */}
+          <div className="card mb-4">
+            <h3 className="text-lg font-bold mb-3 text-blue-600">
+              {isCombat
+                ? `Score for ${
+                    selectedParticipant.alias || selectedParticipant.name
+                  }`
+                : 'Criteria Scores'}
+            </h3>
+            <CriteriaList
+              criteria={template.criteria}
+              scores={scores}
+              onScoreChange={handleScoreChange}
+              disabled={submitted}
+            />
+          </div>
+
+          {/* Participant 2 Scoring (Combat only) */}
+          {isCombat && combatParticipant2 && (
+            <div className="card mb-4">
+              <h3 className="text-lg font-bold mb-3 text-green-600">
+                Score for {combatParticipant2.alias || combatParticipant2.name}
+              </h3>
+              <CriteriaList
+                criteria={template.criteria}
+                scores={scores2}
+                onScoreChange={handleScore2Change}
+                disabled={submitted}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {/* Fixed Submit Button */}
@@ -443,7 +398,7 @@ export function InvigilatorDashboard() {
             onClick={handleSubmit}
             className="btn btn-primary w-full text-lg"
           >
-            Submit Scores
+            Submit {isCombat && combatParticipant2 ? 'Both ' : ''}Scores
           </button>
         )}
       </div>
