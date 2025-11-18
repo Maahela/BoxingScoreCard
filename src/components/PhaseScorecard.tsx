@@ -1,19 +1,24 @@
 import { Fragment } from 'react';
 import type { Faculty, Event, Score, Participant } from '@/types';
 
-interface DetailedScorecardProps {
+interface PhaseScorecardProps {
   faculties: Faculty[];
   events: Event[];
   scores: Score[];
   participants: Participant[];
+  phaseNumber: 1 | 2;
 }
 
-export function DetailedScorecard({
+export function PhaseScorecard({
   faculties,
   events,
   scores,
   participants,
-}: DetailedScorecardProps) {
+  phaseNumber,
+}: PhaseScorecardProps) {
+  // Filter events by phase
+  const phaseEvents = events.filter((e) => e.phase === phaseNumber);
+
   // Group scores by event and faculty
   const scoresByEventFaculty = new Map<string, Map<string, Score[]>>();
 
@@ -28,11 +33,11 @@ export function DetailedScorecard({
     eventScores.get(score.facultyId)!.push(score);
   });
 
-  // Calculate faculty totals
+  // Calculate faculty totals for this phase
   const facultyTotals = new Map<string, number>();
   faculties.forEach((faculty) => {
     let total = 0;
-    events.forEach((event) => {
+    phaseEvents.forEach((event) => {
       const eventScores =
         scoresByEventFaculty.get(event.id)?.get(faculty.id) || [];
       if (eventScores.length > 0) {
@@ -51,9 +56,9 @@ export function DetailedScorecard({
     (a, b) => (facultyTotals.get(b.id) || 0) - (facultyTotals.get(a.id) || 0)
   );
 
-  // Find the maximum number of participants per faculty across all events
+  // Find the maximum number of participants per faculty across phase events
   const maxParticipantsPerFaculty = Math.max(
-    ...events.map((event) =>
+    ...phaseEvents.map((event) =>
       Math.max(
         ...sortedFaculties.map((faculty) => {
           const facultyScores =
@@ -61,7 +66,8 @@ export function DetailedScorecard({
           return facultyScores.length;
         })
       )
-    )
+    ),
+    1 // Minimum of 1 to avoid 0
   );
 
   // Calculate total columns based on max participants
@@ -70,7 +76,7 @@ export function DetailedScorecard({
   return (
     <div className="overflow-x-auto space-y-6">
       {/* Individual Event Tables */}
-      {events.map((event) => {
+      {phaseEvents.map((event) => {
         return (
           <table key={event.id} className="w-full border-collapse text-sm">
             {/* Event Header */}
@@ -296,7 +302,7 @@ export function DetailedScorecard({
                     maxParticipantsPerFaculty - facultyScores.length;
 
                   return (
-                    <Fragment key={faculty.id}>
+                    <>
                       {facultyScores.map((score, idx) => (
                         <td
                           key={score.id || idx}
@@ -318,7 +324,7 @@ export function DetailedScorecard({
                           -
                         </td>
                       ))}
-                    </Fragment>
+                    </>
                   );
                 })}
               </tr>
@@ -371,7 +377,7 @@ export function DetailedScorecard({
         );
       })}
 
-      {/* Grand Total Table */}
+      {/* Phase Total Table */}
       <table className="w-full border-collapse text-sm">
         <tfoot>
           <tr className="bg-blue-600">
@@ -379,7 +385,7 @@ export function DetailedScorecard({
               className="border border-gray-600 px-4 py-3 text-left text-white font-bold text-lg"
               style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
             >
-              FINAL TOTAL
+              PHASE {phaseNumber} TOTAL
             </th>
             {sortedFaculties.map((faculty) => {
               const total = facultyTotals.get(faculty.id) || 0;

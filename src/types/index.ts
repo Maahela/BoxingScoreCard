@@ -113,3 +113,45 @@ export interface ScoreInputState {
   score: number;
   maxPoints: number;
 }
+
+export interface ActiveParticipants {
+  id?: string;
+  skipping: string | null;
+  shadowBoxing: string | null;
+  punchingBag: string | null;
+  combat: {
+    participant1: string | null;
+    participant2: string | null;
+  };
+}
+
+export interface AuditLog {
+  id?: string;
+  action: 'create' | 'update' | 'delete' | 'restore';
+  collectionName: string;
+  documentId: string;
+  userId: string; // invigilatorId or 'admin'
+  userName: string;
+  userRole: UserRole;
+  timestamp: number;
+  details: {
+    eventId?: string;
+    participantId?: string;
+    facultyId?: string;
+    oldData?: any;
+    newData?: any;
+    reason?: string;
+  };
+}
+
+export interface ScoreBackup {
+  version: string;
+  timestamp: number;
+  exportedBy: string;
+  scores: Score[];
+  metadata: {
+    totalScores: number;
+    events: string[];
+    faculties: string[];
+  };
+}
