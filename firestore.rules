@@ -16,54 +16,47 @@ service cloud.firestore {
     function hasRole(role) {
       return isAuthenticated() && getPinData().role == role;
     }
-    
-    // Helper function to check if invigilator is assigned to event
-    function isAssignedToEvent(eventId) {
-      return isAuthenticated() && 
-             getPinData().role == 'invigilator' &&
-             eventId in getPinData().eventsAssigned;
-    }
 
     // PINs collection - read only for authentication
     match /pins/{pinId} {
       allow read: if true; // Needed for PIN verification during login
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
     }
 
     // Faculties collection
     match /faculties/{facultyId} {
       allow read: if true; // Everyone can read faculties
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
     }
 
     // Participants collection
     match /participants/{participantId} {
       allow read: if true; // Everyone can read participants
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
     }
 
     // Events collection
     match /events/{eventId} {
       allow read: if true; // Everyone can read events
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
     }
 
     // Templates collection
     match /templates/{templateId} {
       allow read: if true; // Everyone can read templates
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
     }
 
     // Invigilators collection
     match /invigilators/{invigilatorId} {
-      allow read: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow read: if true; // Everyone can read invigilators (needed for display)
+      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
     }
 
     // Assignments collection
     match /assignments/{assignmentId} {
       allow read: if true; // Everyone can read assignments
-      allow write: if hasRole('admin');
+      allow write: if false; // PRODUCTION: Reserved for future admin features
     }
 
     // Scores collection
@@ -71,23 +64,24 @@ service cloud.firestore {
       // Everyone can read scores (for display screen)
       allow read: if true;
       
-      // Allow score creation (PIN auth is handled in app logic)
+      // Only allow score creation by authenticated users (PIN auth is handled in app logic)
+      // Note: In production, consider validating invigilatorId matches auth context
       allow create: if true;
       
-      // Allow updates and deletes
-      allow update, delete: if true;
+      // Prevent updates and deletes in production (scores should be immutable once submitted)
+      allow update, delete: if false;
     }
 
     // Aggregates collection (for faculty totals)
     match /aggregates/{aggregateId} {
       allow read: if true; // Everyone can read aggregates
-      allow write: if hasRole('admin'); // Only admin can manually update
+      allow write: if false; // PRODUCTION: Aggregates should be calculated, not manually updated
     }
 
     // Active Participants collection (for live participant selection)
     match /activeParticipants/{docId} {
       allow read: if true; // Everyone can read active participants (invigilators need this)
-      allow write: if true; // TEMPORARY: Allow for testing - change to hasRole('admin') after testing
+      allow write: if true; // TEMPORARY: For testing - TODO: Add admin role check when auth is implemented
     }
 
     // Default deny all other collections

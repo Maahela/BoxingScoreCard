@@ -1,4 +1,3 @@
-import React from 'react';
 import type { CriteriaItem } from '@/types';
 
 interface ScoreInputProps {

@@ -1,4 +1,3 @@
-import React from 'react';
 import type { CriteriaItem, ScoreInputState } from '@/types';
 import { ScoreInput } from './ScoreInput';
 

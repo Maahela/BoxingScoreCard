@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Faculty, FacultyTotals, Event } from '@/types';
 
 interface TotalsTableProps {

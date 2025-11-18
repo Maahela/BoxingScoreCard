@@ -115,11 +115,6 @@ export function InvigilatorDashboard() {
     auth.eventsAssigned?.includes(e.id)
   );
 
-  // Debug logging
-  console.log('Auth object:', auth);
-  console.log('All events:', events);
-  console.log('Assigned events:', assignedEvents);
-
   const handleEventSelect = async (event: Event) => {
     setSelectedEvent(event);
     setSelectedFaculty(null);

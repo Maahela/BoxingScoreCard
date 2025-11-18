@@ -172,9 +172,7 @@ export async function addInvigilator(
 // Score helpers
 export async function addScore(score: Omit<Score, 'id'>): Promise<string> {
   try {
-    console.log('Adding score:', score);
     const id = await addDocument<Score>('scores', score);
-    console.log('Score added successfully with ID:', id);
     return id;
   } catch (error) {
     console.error('Error adding score:', error);

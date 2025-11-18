@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Participant, Faculty } from '@/types';
 
 interface ParticipantCardProps {

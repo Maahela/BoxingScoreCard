@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Faculty, Event, Score, Participant } from '@/types';
 
 interface PhaseScorecardProps {
@@ -107,7 +106,7 @@ export function PhaseScorecard({
                     maxParticipantsPerFaculty - facultyScores.length;
 
                   return (
-                    <React.Fragment key={faculty.id}>
+                    <>
                       {facultyScores.length > 0 ? (
                         <>
                           {facultyScores.map((score, idx) => {
@@ -174,7 +173,7 @@ export function PhaseScorecard({
                           ))}
                         </>
                       )}
-                    </React.Fragment>
+                    </>
                   );
                 })}
               </tr>
@@ -302,7 +301,7 @@ export function PhaseScorecard({
                     maxParticipantsPerFaculty - facultyScores.length;
 
                   return (
-                    <React.Fragment key={faculty.id}>
+                    <>
                       {facultyScores.map((score, idx) => (
                         <td
                           key={score.id || idx}
@@ -324,7 +323,7 @@ export function PhaseScorecard({
                           -
                         </td>
                       ))}
-                    </React.Fragment>
+                    </>
                   );
                 })}
               </tr>
