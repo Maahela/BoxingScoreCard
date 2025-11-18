@@ -7,7 +7,11 @@ import {
   useRealtimeParticipants,
 } from '@/hooks/useRealtimeData';
 import { useActiveParticipants } from '@/hooks/useActiveParticipants';
-import { getDocument, addScore } from '@/lib/firestoreHelpers';
+import {
+  getDocument,
+  addScore,
+  checkExistingScore,
+} from '@/lib/firestoreHelpers';
 import type { Event, Participant, Template, ScoreInputState } from '@/types';
 import { CriteriaList } from '@/components/CriteriaList';
 import { CombatScoreCard } from '@/components/CombatScoreCard';
@@ -30,6 +34,7 @@ export function InvigilatorDashboard() {
   const [scores2, setScores2] = useState<ScoreInputState[]>([]);
   const [template, setTemplate] = useState<Template | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [alreadyScored, setAlreadyScored] = useState(false);
 
   // Automatically load active participant when event is selected
   useEffect(() => {
@@ -75,6 +80,35 @@ export function InvigilatorDashboard() {
       setCombatParticipant2(null);
     }
   }, [selectedEvent, activeParticipants, participants]);
+
+  // Check if current participants have already been scored
+  useEffect(() => {
+    const checkScores = async () => {
+      if (!selectedEvent || !selectedParticipant || !auth.invigilatorId) {
+        setAlreadyScored(false);
+        return;
+      }
+
+      const participantIds = [selectedParticipant.id];
+      if (combatParticipant2) {
+        participantIds.push(combatParticipant2.id);
+      }
+
+      const hasScore = await checkExistingScore(
+        selectedEvent.id,
+        participantIds,
+        auth.invigilatorId
+      );
+      setAlreadyScored(hasScore);
+    };
+
+    checkScores();
+  }, [
+    selectedEvent,
+    selectedParticipant,
+    combatParticipant2,
+    auth.invigilatorId,
+  ]);
 
   // Filter events assigned to this invigilator
   const assignedEvents = events.filter((e) =>
@@ -171,8 +205,12 @@ export function InvigilatorDashboard() {
 
       setSubmitted(true);
 
-      // Reset after delay
+      // Return to event selection after notification
       setTimeout(() => {
+        setSelectedEvent(null);
+        setSelectedParticipant(null);
+        setCombatParticipant2(null);
+        setSubmitted(false);
         const initialScores = template.criteria.map((c) => ({
           criteriaId: c.id,
           score: 0,
@@ -180,7 +218,6 @@ export function InvigilatorDashboard() {
         }));
         setScores(initialScores);
         setScores2(initialScores);
-        setSubmitted(false);
       }, 2000);
     } catch (error) {
       console.error('Error submitting score:', error);
@@ -251,8 +288,8 @@ export function InvigilatorDashboard() {
     );
   }
 
-  // View: Waiting for admin to select active participant
-  if (!selectedParticipant) {
+  // View: Waiting for admin to select active participant OR already scored
+  if (!selectedParticipant || alreadyScored) {
     return (
       <div className="min-h-screen bg-gray-100 p-4">
         <header className="mb-6">
@@ -270,22 +307,56 @@ export function InvigilatorDashboard() {
 
         <div className="card">
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">⏳</div>
-            <h2 className="text-2xl font-bold mb-2">
-              Waiting for Admin Selection
-            </h2>
-            <p className="text-gray-600 mb-6">
-              The admin will select the active participant
-              {selectedEvent.name === 'Boxing Combat' ? 's' : ''} for this
-              event. Your screen will update automatically.
-            </p>
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg inline-block">
-              <div className="text-sm font-medium text-blue-900">
-                {selectedEvent.name === 'Boxing Combat'
-                  ? 'Waiting for both combat participants...'
-                  : 'Waiting for participant selection...'}
-              </div>
-            </div>
+            {alreadyScored ? (
+              <>
+                <div className="text-6xl mb-4">✅</div>
+                <h2 className="text-2xl font-bold mb-2">Already Scored</h2>
+                <p className="text-gray-600 mb-6">
+                  You have already submitted scores for{' '}
+                  {selectedParticipant ? (
+                    <span className="font-semibold">
+                      {selectedParticipant.alias || selectedParticipant.name}
+                      {combatParticipant2 && (
+                        <>
+                          {' '}
+                          and{' '}
+                          {combatParticipant2.alias || combatParticipant2.name}
+                        </>
+                      )}
+                    </span>
+                  ) : (
+                    'these participants'
+                  )}
+                  . Waiting for admin to select the next participant
+                  {selectedEvent.name === 'Boxing Combat' ? 's' : ''}.
+                </p>
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg inline-block">
+                  <div className="text-sm font-medium text-green-900">
+                    Your screen will update automatically when new participants
+                    are selected.
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-6xl mb-4">⏳</div>
+                <h2 className="text-2xl font-bold mb-2">
+                  Waiting for Admin Selection
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  The admin will select the active participant
+                  {selectedEvent.name === 'Boxing Combat' ? 's' : ''} for this
+                  event. Your screen will update automatically.
+                </p>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg inline-block">
+                  <div className="text-sm font-medium text-blue-900">
+                    {selectedEvent.name === 'Boxing Combat'
+                      ? 'Waiting for both combat participants...'
+                      : 'Waiting for participant selection...'}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

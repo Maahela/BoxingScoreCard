@@ -190,6 +190,33 @@ export async function getScoresByFaculty(facultyId: string): Promise<Score[]> {
   return getDocuments<Score>('scores', where('facultyId', '==', facultyId));
 }
 
+export async function checkExistingScore(
+  eventId: string,
+  participantIds: string[],
+  invigilatorId: string
+): Promise<boolean> {
+  try {
+    const scoresRef = collection(db, 'scores');
+    const q = query(
+      scoresRef,
+      where('eventId', '==', eventId),
+      where('invigilatorId', '==', invigilatorId)
+    );
+    const querySnapshot = await getDocs(q);
+
+    // Check if any score matches one of the participant IDs
+    const hasScore = querySnapshot.docs.some((doc) => {
+      const scoreData = doc.data();
+      return participantIds.includes(scoreData.participantId);
+    });
+
+    return hasScore;
+  } catch (error) {
+    console.error('Error checking existing score:', error);
+    return false;
+  }
+}
+
 // Assignment helpers
 export async function getCurrentAssignment(): Promise<Assignment | null> {
   const assignments = await getDocuments<Assignment>(

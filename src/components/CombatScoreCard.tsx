@@ -1,4 +1,9 @@
-import type { CriteriaItem, ScoreInputState, Participant, Faculty } from '@/types';
+import type {
+  CriteriaItem,
+  ScoreInputState,
+  Participant,
+  Faculty,
+} from '@/types';
 
 interface CombatScoreCardProps {
   criteria: CriteriaItem[];
@@ -96,8 +101,10 @@ export function CombatScoreCard({
       {/* Criteria Rows */}
       <div className="space-y-3">
         {criteria.map((criterion) => {
-          const score1 = scores1.find((s) => s.criteriaId === criterion.id)?.score || 0;
-          const score2 = scores2.find((s) => s.criteriaId === criterion.id)?.score || 0;
+          const score1 =
+            scores1.find((s) => s.criteriaId === criterion.id)?.score || 0;
+          const score2 =
+            scores2.find((s) => s.criteriaId === criterion.id)?.score || 0;
 
           return (
             <div
@@ -111,9 +118,7 @@ export function CombatScoreCard({
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() =>
-                      handleDecrement(criterion.id, score1, true)
-                    }
+                    onClick={() => handleDecrement(criterion.id, score1, true)}
                     disabled={disabled || score1 === 0}
                     className="w-10 h-10 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white font-bold rounded-lg transition-colors text-xl"
                   >
@@ -121,7 +126,12 @@ export function CombatScoreCard({
                   </button>
                   <button
                     onClick={() =>
-                      handleIncrement(criterion.id, score1, criterion.maxPoints, true)
+                      handleIncrement(
+                        criterion.id,
+                        score1,
+                        criterion.maxPoints,
+                        true
+                      )
                     }
                     disabled={disabled || score1 >= criterion.maxPoints}
                     className="w-10 h-10 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-bold rounded-lg transition-colors text-xl"
@@ -136,16 +146,16 @@ export function CombatScoreCard({
                 <div className="font-semibold text-gray-800">
                   {criterion.label}
                 </div>
-                <div className="text-sm text-gray-500">({criterion.maxPoints})</div>
+                <div className="text-sm text-gray-500">
+                  ({criterion.maxPoints})
+                </div>
               </div>
 
               {/* Fighter B Controls */}
               <div className="flex justify-start items-center gap-3">
                 <div className="flex gap-2">
                   <button
-                    onClick={() =>
-                      handleDecrement(criterion.id, score2, false)
-                    }
+                    onClick={() => handleDecrement(criterion.id, score2, false)}
                     disabled={disabled || score2 === 0}
                     className="w-10 h-10 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white font-bold rounded-lg transition-colors text-xl"
                   >
@@ -153,7 +163,12 @@ export function CombatScoreCard({
                   </button>
                   <button
                     onClick={() =>
-                      handleIncrement(criterion.id, score2, criterion.maxPoints, false)
+                      handleIncrement(
+                        criterion.id,
+                        score2,
+                        criterion.maxPoints,
+                        false
+                      )
                     }
                     disabled={disabled || score2 >= criterion.maxPoints}
                     className="w-10 h-10 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-bold rounded-lg transition-colors text-xl"
