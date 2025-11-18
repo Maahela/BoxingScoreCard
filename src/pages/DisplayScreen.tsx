@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   useRealtimeFacultyTotals,
   useRealtimeParticipants,
 } from '@/hooks/useRealtimeData';
 import { DetailedScorecard } from '@/components/DetailedScorecard';
+import { PhaseScorecard } from '@/components/PhaseScorecard';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function DisplayScreen() {
@@ -12,7 +13,7 @@ export function DisplayScreen() {
   const { participants } = useRealtimeParticipants();
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const [view, setView] = useState<'summary' | 'detailed'>('summary');
+  const [view, setView] = useState<'summary' | 'phase1' | 'phase2' | 'detailed'>('phase1');
 
   const handleBackToLogin = () => {
     logout();
@@ -52,6 +53,26 @@ export function DisplayScreen() {
       <div className="flex justify-center mb-8">
         <div className="inline-flex rounded-lg bg-gray-800 p-1">
           <button
+            onClick={() => setView('phase1')}
+            className={`px-8 py-4 rounded-lg font-bold text-lg transition-colors ${
+              view === 'phase1'
+                ? 'bg-green-600 text-white shadow-lg'
+                : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            Show Phase 1 Scores
+          </button>
+          <button
+            onClick={() => setView('phase2')}
+            className={`px-8 py-4 rounded-lg font-bold text-lg transition-colors ${
+              view === 'phase2'
+                ? 'bg-green-600 text-white shadow-lg'
+                : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            Show Phase 2 Scores
+          </button>
+          <button
             onClick={() => setView('summary')}
             className={`px-6 py-3 rounded-lg font-medium transition-colors ${
               view === 'summary'
@@ -59,7 +80,7 @@ export function DisplayScreen() {
                 : 'text-gray-300 hover:text-white'
             }`}
           >
-            Summary Totals
+            Summary
           </button>
           <button
             onClick={() => setView('detailed')}
@@ -69,10 +90,52 @@ export function DisplayScreen() {
                 : 'text-gray-300 hover:text-white'
             }`}
           >
-            Detailed Breakdown
+            Full Breakdown
           </button>
         </div>
       </div>
+
+      {/* Phase 1 View */}
+      {view === 'phase1' && (
+        <div className="max-w-full mx-auto px-4">
+          <div className="bg-gray-800 rounded-2xl p-6 shadow-2xl overflow-x-auto">
+            <h2 className="text-4xl font-bold mb-6 text-center text-green-400">
+              Phase 1 Scoreboard
+            </h2>
+            <p className="text-center text-gray-300 mb-6 text-lg">
+              Skipping • Shadow Boxing • Punching Bag
+            </p>
+            <PhaseScorecard
+              faculties={faculties}
+              events={events}
+              scores={scores}
+              participants={participants}
+              phaseNumber={1}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Phase 2 View */}
+      {view === 'phase2' && (
+        <div className="max-w-full mx-auto px-4">
+          <div className="bg-gray-800 rounded-2xl p-6 shadow-2xl overflow-x-auto">
+            <h2 className="text-4xl font-bold mb-6 text-center text-green-400">
+              Phase 2 Scoreboard
+            </h2>
+            <p className="text-center text-gray-300 mb-6 text-lg">
+              Boxing Combat
+            </p>
+            <PhaseScorecard
+              faculties={faculties}
+              events={events}
+              scores={scores}
+              participants={participants}
+              phaseNumber={2}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Summary View */}
       {view === 'summary' && (
