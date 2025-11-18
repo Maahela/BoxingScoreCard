@@ -10,6 +10,7 @@ import { useActiveParticipants } from '@/hooks/useActiveParticipants';
 import { getDocument, addScore } from '@/lib/firestoreHelpers';
 import type { Event, Participant, Template, ScoreInputState } from '@/types';
 import { CriteriaList } from '@/components/CriteriaList';
+import { CombatScoreCard } from '@/components/CombatScoreCard';
 
 export function InvigilatorDashboard() {
   const { auth, logout } = useAuth();
@@ -353,33 +354,30 @@ export function InvigilatorDashboard() {
 
       {template && (
         <>
-          {/* Participant 1 Scoring */}
-          <div className="card mb-4">
-            <h3 className="text-lg font-bold mb-3 text-blue-600">
-              {isCombat
-                ? `Score for ${
-                    selectedParticipant.alias || selectedParticipant.name
-                  }`
-                : 'Criteria Scores'}
-            </h3>
-            <CriteriaList
+          {isCombat && combatParticipant2 ? (
+            /* Combat: Two-column side-by-side scoring layout */
+            <CombatScoreCard
               criteria={template.criteria}
-              scores={scores}
-              onScoreChange={handleScoreChange}
+              participant1={selectedParticipant}
+              participant2={combatParticipant2}
+              faculty1={faculty}
+              faculty2={combatFaculty2}
+              scores1={scores}
+              scores2={scores2}
+              onScore1Change={handleScoreChange}
+              onScore2Change={handleScore2Change}
               disabled={submitted}
             />
-          </div>
-
-          {/* Participant 2 Scoring (Combat only) */}
-          {isCombat && combatParticipant2 && (
+          ) : (
+            /* Non-combat: Standard vertical scoring */
             <div className="card mb-4">
-              <h3 className="text-lg font-bold mb-3 text-green-600">
-                Score for {combatParticipant2.alias || combatParticipant2.name}
+              <h3 className="text-lg font-bold mb-3 text-blue-600">
+                Criteria Scores
               </h3>
               <CriteriaList
                 criteria={template.criteria}
-                scores={scores2}
-                onScoreChange={handleScore2Change}
+                scores={scores}
+                onScoreChange={handleScoreChange}
                 disabled={submitted}
               />
             </div>
