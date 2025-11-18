@@ -24,10 +24,16 @@ export function DisplayScreen() {
       {/* Header */}
       <header className="mb-12">
         <div className="flex justify-between items-center mb-6">
-          <div className="flex-1"></div>
+          <div className="flex-1 flex justify-start">
+            <img
+              src="/images/ucolombo-logo.png"
+              alt="University of Colombo Logo"
+              className="h-20 w-20 object-contain"
+            />
+          </div>
           <div className="flex-1 text-center">
             <h1 className="text-6xl font-bold mb-4">
-              Interfaculty Boxing Freshers 2024
+              Interfaculty Freshers' Boxing Tournament 2025
             </h1>
             <p className="text-2xl text-gray-300">Live Scoreboard</p>
           </div>

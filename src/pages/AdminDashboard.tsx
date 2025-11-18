@@ -6,6 +6,7 @@ import {
   useRealtimeParticipants,
   useRealtimeEvents,
   useRealtimeTemplates,
+  useRealtimeScores,
 } from '@/hooks/useRealtimeData';
 import {
   addFaculty,
@@ -21,6 +22,7 @@ import type {
   Event,
   Template,
   CriteriaItem,
+  Score,
 } from '@/types';
 
 export function AdminDashboard() {
@@ -30,9 +32,10 @@ export function AdminDashboard() {
   const { participants } = useRealtimeParticipants();
   const { events } = useRealtimeEvents();
   const { templates } = useRealtimeTemplates();
+  const { scores } = useRealtimeScores();
 
   const [activeTab, setActiveTab] = useState<
-    'faculties' | 'participants' | 'events' | 'templates'
+    'faculties' | 'participants' | 'events' | 'templates' | 'scores'
   >('faculties');
 
   const handleLogout = () => {
@@ -62,21 +65,27 @@ export function AdminDashboard() {
       {/* Navigation Tabs */}
       <div className="max-w-7xl mx-auto px-4 mt-6">
         <div className="bg-white rounded-lg shadow-md p-2 flex gap-2 overflow-x-auto">
-          {(['faculties', 'participants', 'events', 'templates'] as const).map(
-            (tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-lg font-medium capitalize whitespace-nowrap ${
-                  activeTab === tab
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {tab}
-              </button>
-            )
-          )}
+          {(
+            [
+              'faculties',
+              'participants',
+              'events',
+              'templates',
+              'scores',
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-lg font-medium capitalize whitespace-nowrap ${
+                activeTab === tab
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -93,6 +102,14 @@ export function AdminDashboard() {
           <EventsPanel events={events} templates={templates} />
         )}
         {activeTab === 'templates' && <TemplatesPanel templates={templates} />}
+        {activeTab === 'scores' && (
+          <ScoresPanel
+            scores={scores}
+            participants={participants}
+            faculties={faculties}
+            events={events}
+          />
+        )}
       </div>
     </div>
   );
@@ -530,6 +547,238 @@ function TemplatesPanel({ templates }: { templates: Template[] }) {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// Scores Panel with Delete Functionality
+function ScoresPanel({
+  scores,
+  participants,
+  faculties,
+  events,
+}: {
+  scores: Score[];
+  participants: Participant[];
+  faculties: Faculty[];
+  events: Event[];
+}) {
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    scoreId: string;
+    step: 1 | 2 | null;
+  }>({ scoreId: '', step: null });
+  const [filterEvent, setFilterEvent] = useState<string>('all');
+  const [filterFaculty, setFilterFaculty] = useState<string>('all');
+
+  const handleDeleteClick = (scoreId: string) => {
+    setDeleteConfirm({ scoreId, step: 1 });
+  };
+
+  const handleConfirmStep1 = () => {
+    setDeleteConfirm((prev) => ({ ...prev, step: 2 }));
+  };
+
+  const handleConfirmStep2 = async () => {
+    if (deleteConfirm.scoreId) {
+      await deleteDocument('scores', deleteConfirm.scoreId);
+      setDeleteConfirm({ scoreId: '', step: null });
+    }
+  };
+
+  const handleCancel = () => {
+    setDeleteConfirm({ scoreId: '', step: null });
+  };
+
+  // Filter scores
+  const filteredScores = scores.filter((score) => {
+    if (filterEvent !== 'all' && score.eventId !== filterEvent) return false;
+    if (filterFaculty !== 'all' && score.facultyId !== filterFaculty)
+      return false;
+    return true;
+  });
+
+  // Sort by timestamp (newest first)
+  const sortedScores = [...filteredScores].sort(
+    (a, b) => b.timestamp - a.timestamp
+  );
+
+  return (
+    <div className="card">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold mb-4">Manage Scores</h2>
+
+        {/* Filters */}
+        <div className="flex gap-4 mb-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Filter by Event
+            </label>
+            <select
+              value={filterEvent}
+              onChange={(e) => setFilterEvent(e.target.value)}
+              className="input"
+            >
+              <option value="all">All Events</option>
+              {events.map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Filter by Faculty
+            </label>
+            <select
+              value={filterFaculty}
+              onChange={(e) => setFilterFaculty(e.target.value)}
+              className="input"
+            >
+              <option value="all">All Faculties</option>
+              {faculties.map((faculty) => (
+                <option key={faculty.id} value={faculty.id}>
+                  {faculty.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="text-sm text-gray-600">
+          Showing {sortedScores.length} of {scores.length} scores
+        </div>
+      </div>
+
+      {/* Scores List */}
+      <div className="space-y-3 max-h-[600px] overflow-y-auto">
+        {sortedScores.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No scores found matching the filters
+          </div>
+        ) : (
+          sortedScores.map((score) => {
+            const participant = participants.find(
+              (p) => p.id === score.participantId
+            );
+            const faculty = faculties.find((f) => f.id === score.facultyId);
+            const event = events.find((e) => e.id === score.eventId);
+            const isDeleting = deleteConfirm.scoreId === score.id;
+
+            return (
+              <div
+                key={score.id}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  isDeleting
+                    ? 'bg-red-50 border-red-300'
+                    : 'bg-gray-50 border-transparent'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-lg">
+                        {participant?.name || 'Unknown Participant'}
+                      </span>
+                      {participant?.alias && (
+                        <span className="text-sm text-gray-500 italic">
+                          "{participant.alias}"
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex gap-4 text-sm text-gray-600 mb-2">
+                      {faculty && (
+                        <span
+                          className="font-medium"
+                          style={{ color: faculty.colorHex }}
+                        >
+                          {faculty.name}
+                        </span>
+                      )}
+                      {event && (
+                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                          {event.name}
+                        </span>
+                      )}
+                      <span>Round {score.roundNumber}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl font-bold text-blue-600">
+                        {score.total} points
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(score.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Delete Button & Confirmation */}
+                  <div className="ml-4">
+                    {!isDeleting && (
+                      <button
+                        onClick={() => handleDeleteClick(score.id!)}
+                        className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Delete
+                      </button>
+                    )}
+
+                    {isDeleting && deleteConfirm.step === 1 && (
+                      <div className="flex flex-col gap-2">
+                        <p className="text-sm font-semibold text-red-700 mb-1">
+                          Are you sure?
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleConfirmStep1}
+                            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium"
+                          >
+                            Yes, Delete
+                          </button>
+                          <button
+                            onClick={handleCancel}
+                            className="px-3 py-1.5 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded text-sm font-medium"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {isDeleting && deleteConfirm.step === 2 && (
+                      <div className="flex flex-col gap-2">
+                        <p className="text-sm font-bold text-red-800 mb-1">
+                          Final confirmation!
+                        </p>
+                        <p className="text-xs text-red-600 mb-1">
+                          This cannot be undone
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleConfirmStep2}
+                            className="px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded text-sm font-bold"
+                          >
+                            Confirm Delete
+                          </button>
+                          <button
+                            onClick={handleCancel}
+                            className="px-3 py-1.5 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded text-sm font-medium"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
