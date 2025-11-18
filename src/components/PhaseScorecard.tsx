@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import type { Faculty, Event, Score, Participant } from '@/types';
 
 interface PhaseScorecardProps {
@@ -75,7 +76,9 @@ export function PhaseScorecard({
   return (
     <div className="overflow-x-auto space-y-6">
       {/* Individual Event Tables */}
-      {phaseEvents.map((event) => {
+      {phaseEvents.map((event, eventIndex) => {
+        const isLastEvent = eventIndex === phaseEvents.length - 1;
+
         return (
           <table key={event.id} className="w-full border-collapse text-sm">
             {/* Event Header */}
@@ -106,7 +109,7 @@ export function PhaseScorecard({
                     maxParticipantsPerFaculty - facultyScores.length;
 
                   return (
-                    <>
+                    <Fragment key={faculty.id}>
                       {facultyScores.length > 0 ? (
                         <>
                           {facultyScores.map((score, idx) => {
@@ -173,7 +176,7 @@ export function PhaseScorecard({
                           ))}
                         </>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tr>
@@ -243,7 +246,7 @@ export function PhaseScorecard({
                             maxParticipantsPerFaculty - facultyScores.length;
 
                           return (
-                            <React.Fragment key={faculty.id}>
+                            <Fragment key={faculty.id}>
                               {facultyScores.map((score, idx) => {
                                 const criteriaScore = score.criteriaScores.find(
                                   (c) => c.criteriaId === criteria.criteriaId
@@ -273,7 +276,7 @@ export function PhaseScorecard({
                                   </td>
                                 )
                               )}
-                            </React.Fragment>
+                            </Fragment>
                           );
                         })}
                       </tr>
@@ -301,7 +304,7 @@ export function PhaseScorecard({
                     maxParticipantsPerFaculty - facultyScores.length;
 
                   return (
-                    <>
+                    <Fragment key={faculty.id}>
                       {facultyScores.map((score, idx) => (
                         <td
                           key={score.id || idx}
@@ -323,7 +326,7 @@ export function PhaseScorecard({
                           -
                         </td>
                       ))}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tr>
@@ -371,38 +374,40 @@ export function PhaseScorecard({
               <tr className="bg-gray-900">
                 <td colSpan={totalColumns} className="h-4"></td>
               </tr>
+
+              {/* Phase Total Row - only show in last event table */}
+              {isLastEvent && (
+                <tr className="bg-blue-600">
+                  <th
+                    className="border border-gray-600 px-4 py-3 text-left text-white font-bold text-lg"
+                    style={{
+                      width: '250px',
+                      minWidth: '250px',
+                      maxWidth: '250px',
+                    }}
+                  >
+                    PHASE {phaseNumber} TOTAL
+                  </th>
+                  {sortedFaculties.map((faculty) => {
+                    const total = facultyTotals.get(faculty.id) || 0;
+
+                    return (
+                      <th
+                        key={faculty.id}
+                        colSpan={maxParticipantsPerFaculty}
+                        className="border border-gray-600 px-3 py-3 text-center text-white font-bold text-xl"
+                        style={{ backgroundColor: faculty.colorHex }}
+                      >
+                        {total.toFixed(1)}
+                      </th>
+                    );
+                  })}
+                </tr>
+              )}
             </tbody>
           </table>
         );
       })}
-
-      {/* Phase Total Table */}
-      <table className="w-full border-collapse text-sm">
-        <tfoot>
-          <tr className="bg-blue-600">
-            <th
-              className="border border-gray-600 px-4 py-3 text-left text-white font-bold text-lg"
-              style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
-            >
-              PHASE {phaseNumber} TOTAL
-            </th>
-            {sortedFaculties.map((faculty) => {
-              const total = facultyTotals.get(faculty.id) || 0;
-
-              return (
-                <th
-                  key={faculty.id}
-                  colSpan={maxParticipantsPerFaculty}
-                  className="border border-gray-600 px-3 py-3 text-center text-white font-bold text-xl"
-                  style={{ backgroundColor: faculty.colorHex }}
-                >
-                  {total.toFixed(1)}
-                </th>
-              );
-            })}
-          </tr>
-        </tfoot>
-      </table>
     </div>
   );
 }
