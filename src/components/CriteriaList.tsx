@@ -31,7 +31,7 @@ export function CriteriaList({
           />
         );
       })}
-      
+
       <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-500 rounded-lg">
         <div className="flex justify-between items-center">
           <span className="text-xl font-bold text-gray-800">Total Score:</span>

@@ -14,9 +14,7 @@ export function TotalsTable({
   showEventBreakdown = false,
 }: TotalsTableProps) {
   // Sort faculties by total score descending
-  const sortedTotals = [...totals].sort(
-    (a, b) => b.totalScore - a.totalScore
-  );
+  const sortedTotals = [...totals].sort((a, b) => b.totalScore - a.totalScore);
 
   const getFacultyById = (id: string) => faculties.find((f) => f.id === id);
 
