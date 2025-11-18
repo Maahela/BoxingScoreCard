@@ -16,11 +16,12 @@ function ProtectedRoute({
   const { auth } = useAuth();
 
   if (!auth.isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  if (auth.role && !allowedRoles.includes(auth.role)) {
-    return <Navigate to="/" replace />;
+  // If role is missing or not allowed, force re-auth at login to avoid redirect loops
+  if (!auth.role || !allowedRoles.includes(auth.role)) {
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
@@ -34,7 +35,7 @@ function AppRoutes() {
       <Route
         path="/"
         element={
-          auth.isAuthenticated ? (
+          auth.isAuthenticated && auth.role ? (
             <Navigate
               to={auth.role === 'admin' ? '/admin' : '/invigilator'}
               replace
@@ -44,6 +45,7 @@ function AppRoutes() {
           )
         }
       />
+      <Route path="/login" element={<Login />} />
       <Route
         path="/admin"
         element={
@@ -61,7 +63,7 @@ function AppRoutes() {
         }
       />
       <Route path="/display" element={<DisplayScreen />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
