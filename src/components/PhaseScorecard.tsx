@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import type { Faculty, Event, Score, Participant } from '@/types';
 
 interface PhaseScorecardProps {
@@ -106,7 +107,7 @@ export function PhaseScorecard({
                     maxParticipantsPerFaculty - facultyScores.length;
 
                   return (
-                    <>
+                    <Fragment key={faculty.id}>
                       {facultyScores.length > 0 ? (
                         <>
                           {facultyScores.map((score, idx) => {
@@ -173,7 +174,7 @@ export function PhaseScorecard({
                           ))}
                         </>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tr>
@@ -243,7 +244,7 @@ export function PhaseScorecard({
                             maxParticipantsPerFaculty - facultyScores.length;
 
                           return (
-                            <React.Fragment key={faculty.id}>
+                            <Fragment key={faculty.id}>
                               {facultyScores.map((score, idx) => {
                                 const criteriaScore = score.criteriaScores.find(
                                   (c) => c.criteriaId === criteria.criteriaId
@@ -273,7 +274,7 @@ export function PhaseScorecard({
                                   </td>
                                 )
                               )}
-                            </React.Fragment>
+                            </Fragment>
                           );
                         })}
                       </tr>

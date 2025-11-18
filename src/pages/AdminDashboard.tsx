@@ -17,6 +17,8 @@ import {
   deleteDocument,
 } from '@/lib/firestoreHelpers';
 import { ActiveParticipantsPanel } from '@/components/ActiveParticipantsPanel';
+import { AuditLogViewer } from '@/components/AuditLogViewer';
+import { BackupRestorePanel } from '@/components/BackupRestorePanel';
 import type {
   Faculty,
   Participant,
@@ -36,7 +38,14 @@ export function AdminDashboard() {
   const { scores } = useRealtimeScores();
 
   const [activeTab, setActiveTab] = useState<
-    'active' | 'faculties' | 'participants' | 'events' | 'templates' | 'scores'
+    | 'active'
+    | 'faculties'
+    | 'participants'
+    | 'events'
+    | 'templates'
+    | 'scores'
+    | 'audit'
+    | 'backup'
   >('active');
 
   const handleLogout = () => {
@@ -74,6 +83,8 @@ export function AdminDashboard() {
               'events',
               'templates',
               'scores',
+              'audit',
+              'backup',
             ] as const
           ).map((tab) => (
             <button
@@ -117,6 +128,10 @@ export function AdminDashboard() {
             faculties={faculties}
             events={events}
           />
+        )}
+        {activeTab === 'audit' && <AuditLogViewer />}
+        {activeTab === 'backup' && (
+          <BackupRestorePanel exportedBy={auth.adminId || 'admin'} />
         )}
       </div>
     </div>

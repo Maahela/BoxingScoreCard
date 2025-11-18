@@ -84,6 +84,13 @@ service cloud.firestore {
       allow write: if true; // TEMPORARY: For testing - TODO: Add admin role check when auth is implemented
     }
 
+    // Audit Logs collection (for tracking all score operations)
+    match /auditLogs/{logId} {
+      allow read: if true; // Admin needs to view audit logs
+      allow create: if true; // System automatically creates logs when scores are submitted
+      allow update, delete: if false; // Audit logs should be immutable
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

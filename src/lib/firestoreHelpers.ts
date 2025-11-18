@@ -26,6 +26,8 @@ import type {
   PinAuth,
   FacultyTotals,
   ActiveParticipants,
+  AuditLog,
+  ScoreBackup,
 } from '@/types';
 
 // Generic CRUD helpers
@@ -170,9 +172,39 @@ export async function addInvigilator(
 }
 
 // Score helpers
-export async function addScore(score: Omit<Score, 'id'>): Promise<string> {
+export async function addScore(
+  score: Omit<Score, 'id'>,
+  userInfo?: {
+    userId: string;
+    userName: string;
+    userRole: 'invigilator' | 'admin';
+  }
+): Promise<string> {
   try {
     const id = await addDocument<Score>('scores', score);
+
+    // Log the score creation in audit logs
+    if (userInfo) {
+      await logAudit({
+        action: 'create',
+        collectionName: 'scores',
+        documentId: id,
+        userId: userInfo.userId,
+        userName: userInfo.userName,
+        userRole: userInfo.userRole,
+        timestamp: Date.now(),
+        details: {
+          eventId: score.eventId,
+          participantId: score.participantId,
+          facultyId: score.facultyId,
+          newData: {
+            total: score.total,
+            roundNumber: score.roundNumber,
+          },
+        },
+      });
+    }
+
     return id;
   } catch (error) {
     console.error('Error adding score:', error);
@@ -313,5 +345,172 @@ export function subscribeToActiveParticipants(
         },
       } as ActiveParticipants);
     }
+  });
+}
+
+// Audit Log helpers
+export async function logAudit(
+  auditData: Omit<AuditLog, 'id'>
+): Promise<string> {
+  try {
+    const id = await addDocument<AuditLog>('auditLogs', auditData);
+    return id;
+  } catch (error) {
+    console.error('Error logging audit:', error);
+    throw error;
+  }
+}
+
+export async function getAuditLogs(filters?: {
+  action?: AuditLog['action'];
+  userId?: string;
+  startDate?: number;
+  endDate?: number;
+}): Promise<AuditLog[]> {
+  const constraints: QueryConstraint[] = [orderBy('timestamp', 'desc')];
+
+  if (filters?.action) {
+    constraints.push(where('action', '==', filters.action));
+  }
+  if (filters?.userId) {
+    constraints.push(where('userId', '==', filters.userId));
+  }
+  if (filters?.startDate) {
+    constraints.push(where('timestamp', '>=', filters.startDate));
+  }
+  if (filters?.endDate) {
+    constraints.push(where('timestamp', '<=', filters.endDate));
+  }
+
+  return getDocuments<AuditLog>('auditLogs', ...constraints);
+}
+
+// Backup/Restore helpers
+export async function exportScoresBackup(
+  exportedBy: string
+): Promise<ScoreBackup> {
+  const scores = await getDocuments<Score>('scores');
+  const events = await getDocuments<Event>('events');
+  const faculties = await getDocuments<Faculty>('faculties');
+
+  const backup: ScoreBackup = {
+    version: '1.0',
+    timestamp: Date.now(),
+    exportedBy,
+    scores,
+    metadata: {
+      totalScores: scores.length,
+      events: events.map((e) => e.id),
+      faculties: faculties.map((f) => f.id),
+    },
+  };
+
+  return backup;
+}
+
+export async function downloadBackup(exportedBy: string): Promise<void> {
+  const backup = await exportScoresBackup(exportedBy);
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {
+    type: 'application/json',
+  });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `scores-backup-${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // Log the backup
+  await logAudit({
+    action: 'create',
+    collectionName: 'backups',
+    documentId: `backup-${backup.timestamp}`,
+    userId: exportedBy,
+    userName: exportedBy,
+    userRole: 'admin',
+    timestamp: Date.now(),
+    details: {
+      reason: 'Scores backup downloaded',
+    },
+  });
+}
+
+export async function restoreScoresFromBackup(
+  backup: ScoreBackup,
+  restoredBy: string
+): Promise<{ success: number; failed: number; errors: string[] }> {
+  const results = {
+    success: 0,
+    failed: 0,
+    errors: [] as string[],
+  };
+
+  for (const score of backup.scores) {
+    try {
+      const { id, ...scoreData } = score;
+      await addDoc(collection(db, 'scores'), scoreData);
+      results.success++;
+    } catch (error) {
+      results.failed++;
+      results.errors.push(`Failed to restore score ${score.id}: ${error}`);
+    }
+  }
+
+  // Log the restore
+  await logAudit({
+    action: 'restore',
+    collectionName: 'scores',
+    documentId: `restore-${Date.now()}`,
+    userId: restoredBy,
+    userName: restoredBy,
+    userRole: 'admin',
+    timestamp: Date.now(),
+    details: {
+      reason: `Restored ${results.success} scores from backup`,
+      oldData: {
+        backupTimestamp: backup.timestamp,
+        totalScores: backup.scores.length,
+      },
+      newData: results,
+    },
+  });
+
+  return results;
+}
+
+export async function uploadAndRestoreBackup(
+  file: File,
+  restoredBy: string
+): Promise<{ success: number; failed: number; errors: string[] }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const backup = JSON.parse(e.target?.result as string) as ScoreBackup;
+
+        // Validate backup structure
+        if (
+          !backup.version ||
+          !backup.scores ||
+          !Array.isArray(backup.scores)
+        ) {
+          reject(new Error('Invalid backup file format'));
+          return;
+        }
+
+        const results = await restoreScoresFromBackup(backup, restoredBy);
+        resolve(results);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    reader.onerror = () => reject(new Error('Failed to read backup file'));
+    reader.readAsText(file);
   });
 }

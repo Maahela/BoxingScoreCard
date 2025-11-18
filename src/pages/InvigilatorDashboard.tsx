@@ -163,39 +163,53 @@ export function InvigilatorDashboard() {
     const total = scores.reduce((sum, s) => sum + s.score, 0);
 
     try {
-      // Submit score for participant 1
-      await addScore({
-        eventId: selectedEvent.id,
-        templateId: template.id,
-        participantId: selectedParticipant.id,
-        facultyId: selectedParticipant.facultyId,
-        invigilatorId: auth.invigilatorId,
-        roundNumber: 1,
-        criteriaScores: scores.map((s) => ({
-          criteriaId: s.criteriaId,
-          score: s.score,
-        })),
-        total,
-        timestamp: Date.now(),
-      });
+      // Submit score for participant 1 with audit logging
+      await addScore(
+        {
+          eventId: selectedEvent.id,
+          templateId: template.id,
+          participantId: selectedParticipant.id,
+          facultyId: selectedParticipant.facultyId,
+          invigilatorId: auth.invigilatorId,
+          roundNumber: 1,
+          criteriaScores: scores.map((s) => ({
+            criteriaId: s.criteriaId,
+            score: s.score,
+          })),
+          total,
+          timestamp: Date.now(),
+        },
+        {
+          userId: auth.invigilatorId,
+          userName: auth.name || 'Invigilator',
+          userRole: 'invigilator',
+        }
+      );
 
       // If combat event and second participant exists, submit their score too
       if (selectedEvent.name === 'Boxing Combat' && combatParticipant2) {
         const total2 = scores2.reduce((sum, s) => sum + s.score, 0);
-        await addScore({
-          eventId: selectedEvent.id,
-          templateId: template.id,
-          participantId: combatParticipant2.id,
-          facultyId: combatParticipant2.facultyId,
-          invigilatorId: auth.invigilatorId,
-          roundNumber: 1,
-          criteriaScores: scores2.map((s) => ({
-            criteriaId: s.criteriaId,
-            score: s.score,
-          })),
-          total: total2,
-          timestamp: Date.now(),
-        });
+        await addScore(
+          {
+            eventId: selectedEvent.id,
+            templateId: template.id,
+            participantId: combatParticipant2.id,
+            facultyId: combatParticipant2.facultyId,
+            invigilatorId: auth.invigilatorId,
+            roundNumber: 1,
+            criteriaScores: scores2.map((s) => ({
+              criteriaId: s.criteriaId,
+              score: s.score,
+            })),
+            total: total2,
+            timestamp: Date.now(),
+          },
+          {
+            userId: auth.invigilatorId,
+            userName: auth.name || 'Invigilator',
+            userRole: 'invigilator',
+          }
+        );
       }
 
       setSubmitted(true);

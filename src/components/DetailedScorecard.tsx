@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import type { Faculty, Event, Score, Participant } from '@/types';
 
 interface DetailedScorecardProps {
@@ -100,7 +101,7 @@ export function DetailedScorecard({
                     maxParticipantsPerFaculty - facultyScores.length;
 
                   return (
-                    <React.Fragment key={faculty.id}>
+                    <Fragment key={faculty.id}>
                       {facultyScores.length > 0 ? (
                         <>
                           {facultyScores.map((score, idx) => {
@@ -167,7 +168,7 @@ export function DetailedScorecard({
                           ))}
                         </>
                       )}
-                    </React.Fragment>
+                    </Fragment>
                   );
                 })}
               </tr>
@@ -237,7 +238,7 @@ export function DetailedScorecard({
                             maxParticipantsPerFaculty - facultyScores.length;
 
                           return (
-                            <React.Fragment key={faculty.id}>
+                            <Fragment key={faculty.id}>
                               {facultyScores.map((score, idx) => {
                                 const criteriaScore = score.criteriaScores.find(
                                   (c) => c.criteriaId === criteria.criteriaId
@@ -267,7 +268,7 @@ export function DetailedScorecard({
                                   </td>
                                 )
                               )}
-                            </React.Fragment>
+                            </Fragment>
                           );
                         })}
                       </tr>
@@ -295,7 +296,7 @@ export function DetailedScorecard({
                     maxParticipantsPerFaculty - facultyScores.length;
 
                   return (
-                    <React.Fragment key={faculty.id}>
+                    <Fragment key={faculty.id}>
                       {facultyScores.map((score, idx) => (
                         <td
                           key={score.id || idx}
@@ -317,7 +318,7 @@ export function DetailedScorecard({
                           -
                         </td>
                       ))}
-                    </React.Fragment>
+                    </Fragment>
                   );
                 })}
               </tr>
