@@ -64,9 +64,23 @@ service cloud.firestore {
       // Everyone can read scores (for display screen)
       allow read: if true;
       
-      // Only allow score creation by authenticated users (PIN auth is handled in app logic)
-      // Note: In production, consider validating invigilatorId matches auth context
-      allow create: if true;
+      // Only allow score creation with valid data structure
+      // Validate that required fields are present and correct types
+      allow create: if request.resource.data.keys().hasAll([
+        'eventId', 'templateId', 'participantId', 'facultyId', 
+        'invigilatorId', 'roundNumber', 'criteriaScores', 'total', 'timestamp'
+      ]) && 
+      request.resource.data.eventId is string &&
+      request.resource.data.templateId is string &&
+      request.resource.data.participantId is string &&
+      request.resource.data.facultyId is string &&
+      request.resource.data.invigilatorId is string &&
+      request.resource.data.roundNumber is int &&
+      request.resource.data.roundNumber > 0 &&
+      request.resource.data.criteriaScores is list &&
+      request.resource.data.total is number &&
+      request.resource.data.total >= 0 &&
+      request.resource.data.timestamp is number;
       
       // Prevent updates and deletes in production (scores should be immutable once submitted)
       allow update, delete: if false;
@@ -81,7 +95,9 @@ service cloud.firestore {
     // Active Participants collection (for live participant selection)
     match /activeParticipants/{docId} {
       allow read: if true; // Everyone can read active participants (invigilators need this)
-      allow write: if true; // TEMPORARY: For testing - TODO: Add admin role check when auth is implemented
+      // PRODUCTION: Only admin should be able to update active participants
+      // For now allowing all writes, but consider adding admin role check
+      allow write: if true; // TODO: Change to admin-only in production
     }
 
     // Default deny all other collections

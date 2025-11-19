@@ -15,6 +15,8 @@ import {
   addTemplate,
   updateDocument,
   deleteDocument,
+  clearAllScores,
+  populateDummyScores,
 } from '@/lib/firestoreHelpers';
 import { ActiveParticipantsPanel } from '@/components/ActiveParticipantsPanel';
 import type {
@@ -206,10 +208,12 @@ function ParticipantsPanel({
 }) {
   const { events } = useRealtimeEvents();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [alias, setAlias] = useState('');
   const [facultyId, setFacultyId] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const toggleEvent = (eventId: string) => {
     setSelectedEvents((prev) =>
@@ -220,18 +224,86 @@ function ParticipantsPanel({
   };
 
   const handleAdd = async () => {
-    if (!name || !facultyId || selectedEvents.length === 0) {
+    // Input validation
+    const sanitizedName = name.trim();
+    const sanitizedAlias = alias.trim();
+
+    if (!sanitizedName || !facultyId || selectedEvents.length === 0) {
       alert('Please fill in name, faculty, and select at least one event');
       return;
     }
-    await addParticipant({
-      name,
-      alias: alias || undefined,
-      facultyId,
-      events: selectedEvents,
-    });
+
+    // Validate name length and characters
+    if (sanitizedName.length < 2 || sanitizedName.length > 100) {
+      alert('Name must be between 2 and 100 characters');
+      return;
+    }
+
+    if (sanitizedAlias && sanitizedAlias.length > 50) {
+      alert('Alias must be 50 characters or less');
+      return;
+    }
+
+    // Check for potentially malicious content
+    const dangerousPattern = /<script|javascript:|onerror=|onclick=/i;
+    if (
+      dangerousPattern.test(sanitizedName) ||
+      dangerousPattern.test(sanitizedAlias)
+    ) {
+      alert('Invalid characters detected in name or alias');
+      return;
+    }
+
+    try {
+      if (editingId) {
+        // Update existing participant
+        await updateDocument('participants', editingId, {
+          name: sanitizedName,
+          alias: sanitizedAlias || undefined,
+          facultyId,
+          events: selectedEvents,
+        });
+        setEditingId(null);
+      } else {
+        // Add new participant
+        await addParticipant({
+          name: sanitizedName,
+          alias: sanitizedAlias || undefined,
+          facultyId,
+          events: selectedEvents,
+        });
+      }
+
+      setName('');
+      setAlias('');
+      setFacultyId('');
+      setSelectedEvents([]);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error saving participant:', error);
+      alert('Failed to save participant. Please try again.');
+    }
+  };
+
+  const handleEdit = (participant: Participant) => {
+    setEditingId(participant.id!);
+    setName(participant.name);
+    setAlias(participant.alias || '');
+    setFacultyId(participant.facultyId);
+    setSelectedEvents(participant.events);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (participantId: string) => {
+    await deleteDocument('participants', participantId);
+    setDeleteConfirm(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
     setName('');
     setAlias('');
+    setFacultyId('');
     setSelectedEvents([]);
     setShowForm(false);
   };
@@ -241,7 +313,13 @@ function ParticipantsPanel({
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold">Participants</h2>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm && !editingId) {
+              setShowForm(false);
+            } else {
+              handleCancelEdit();
+            }
+          }}
           className="btn btn-primary"
         >
           {showForm ? 'Cancel' : 'Add Participant'}
@@ -250,6 +328,9 @@ function ParticipantsPanel({
 
       {showForm && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h3 className="font-semibold mb-3">
+            {editingId ? 'Edit Participant' : 'Add New Participant'}
+          </h3>
           <input
             type="text"
             placeholder="Full Name"
@@ -304,7 +385,7 @@ function ParticipantsPanel({
           </div>
 
           <button onClick={handleAdd} className="btn btn-success">
-            Save Participant
+            {editingId ? 'Update Participant' : 'Save Participant'}
           </button>
         </div>
       )}
@@ -315,8 +396,15 @@ function ParticipantsPanel({
           const participantEvents = events.filter((e) =>
             participant.events.includes(e.id)
           );
+          const isDeleting = deleteConfirm === participant.id;
+
           return (
-            <div key={participant.id} className="p-4 bg-gray-50 rounded-lg">
+            <div
+              key={participant.id}
+              className={`p-4 rounded-lg transition-all ${
+                isDeleting ? 'bg-red-50 border-2 border-red-300' : 'bg-gray-50'
+              }`}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="font-semibold">{participant.name}</div>
@@ -348,6 +436,48 @@ function ParticipantsPanel({
                   {participantEvents.length === 0 && (
                     <div className="text-xs text-red-500 mt-1">
                       ⚠️ Not assigned to any events
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="ml-4 flex gap-2">
+                  {!isDeleting && (
+                    <>
+                      <button
+                        onClick={() => handleEdit(participant)}
+                        className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(participant.id!)}
+                        className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+
+                  {isDeleting && (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-sm font-semibold text-red-700 mb-1">
+                        Delete "{participant.name}"?
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDelete(participant.id!)}
+                          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium"
+                        >
+                          Yes, Delete
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(null)}
+                          className="px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white rounded text-sm font-medium"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -578,6 +708,7 @@ function ScoresPanel({
   }>({ scoreId: '', step: null });
   const [filterEvent, setFilterEvent] = useState<string>('all');
   const [filterFaculty, setFilterFaculty] = useState<string>('all');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleDeleteClick = (scoreId: string) => {
     setDeleteConfirm({ scoreId, step: 1 });
@@ -598,6 +729,76 @@ function ScoresPanel({
     setDeleteConfirm({ scoreId: '', step: null });
   };
 
+  const handleClearAllScores = async () => {
+    const securityCode = prompt(
+      '⚠️ SECURITY CHECK: Enter the security code to proceed with deleting ALL scores:'
+    );
+
+    if (securityCode !== 'Boxing123abc') {
+      alert('❌ Incorrect security code. Operation cancelled.');
+      return;
+    }
+
+    if (
+      !confirm(
+        '⚠️ WARNING: This will delete ALL scores from the system. This action cannot be undone. Are you absolutely sure?'
+      )
+    ) {
+      return;
+    }
+
+    if (
+      !confirm(
+        '🚨 FINAL CONFIRMATION: Delete all ' +
+          scores.length +
+          ' scores? This is your last chance to cancel!'
+      )
+    ) {
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await clearAllScores();
+      alert('✅ Successfully deleted all scores!');
+    } catch (error) {
+      console.error('Error clearing scores:', error);
+      alert('❌ Failed to clear scores. Please check the console for details.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePopulateDummyScores = async () => {
+    const securityCode = prompt(
+      '🔒 SECURITY CHECK: Enter the security code to populate dummy scores:'
+    );
+
+    if (securityCode !== 'Boxing123abc') {
+      alert('❌ Incorrect security code. Operation cancelled.');
+      return;
+    }
+
+    if (
+      !confirm(
+        'This will generate dummy scores for all participants and events. Continue?'
+      )
+    ) {
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await populateDummyScores();
+      alert('✅ Successfully populated dummy scores!');
+    } catch (error) {
+      console.error('Error populating dummy scores:', error);
+      alert('❌ Failed to populate scores. ' + (error as Error).message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Filter scores
   const filteredScores = scores.filter((score) => {
     if (filterEvent !== 'all' && score.eventId !== filterEvent) return false;
@@ -614,7 +815,29 @@ function ScoresPanel({
   return (
     <div className="card">
       <div className="mb-6">
-        <h2 className="text-xl font-bold mb-4">Manage Scores</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Manage Scores</h2>
+
+          {/* Utility Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={handlePopulateDummyScores}
+              disabled={isProcessing}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              {isProcessing ? <span className="animate-spin">⏳</span> : '🎲'}
+              Populate Dummy Scores
+            </button>
+            <button
+              onClick={handleClearAllScores}
+              disabled={isProcessing || scores.length === 0}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              {isProcessing ? <span className="animate-spin">⏳</span> : '🗑️'}
+              Clear All Scores ({scores.length})
+            </button>
+          </div>
+        </div>
 
         {/* Filters */}
         <div className="flex gap-4 mb-4">

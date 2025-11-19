@@ -199,6 +199,7 @@ export function InvigilatorDashboard() {
       }
 
       setSubmitted(true);
+      setAlreadyScored(true);
 
       // Return to event selection after notification
       setTimeout(() => {
@@ -206,6 +207,7 @@ export function InvigilatorDashboard() {
         setSelectedParticipant(null);
         setCombatParticipant2(null);
         setSubmitted(false);
+        setAlreadyScored(false);
         const initialScores = template.criteria.map((c) => ({
           criteriaId: c.id,
           score: 0,
@@ -216,7 +218,10 @@ export function InvigilatorDashboard() {
       }, 2000);
     } catch (error) {
       console.error('Error submitting score:', error);
-      alert('Failed to submit score. Please try again.');
+      // Don't expose internal error details to users
+      alert(
+        'Failed to submit score. Please check your connection and try again.'
+      );
     }
   };
 

@@ -39,6 +39,17 @@ export function CombatScoreCard({
     maxPoints: number,
     isParticipant1: boolean
   ) => {
+    // Validate inputs
+    if (typeof currentScore !== 'number' || typeof maxPoints !== 'number') {
+      console.error('Invalid score or maxPoints value');
+      return;
+    }
+
+    if (currentScore < 0 || currentScore > maxPoints) {
+      console.error('Score out of valid range');
+      return;
+    }
+
     if (currentScore < maxPoints) {
       const newScore = currentScore + 1;
       if (isParticipant1) {
@@ -54,6 +65,12 @@ export function CombatScoreCard({
     currentScore: number,
     isParticipant1: boolean
   ) => {
+    // Validate inputs
+    if (typeof currentScore !== 'number' || currentScore < 0) {
+      console.error('Invalid score value');
+      return;
+    }
+
     if (currentScore > 0) {
       const newScore = currentScore - 1;
       if (isParticipant1) {

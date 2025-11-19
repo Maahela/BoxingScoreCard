@@ -15,6 +15,20 @@ export function Login() {
     setError('');
     setLoading(true);
 
+    // Basic PIN validation
+    if (pin.length < 4 || pin.length > 10) {
+      setError('Invalid PIN format');
+      setLoading(false);
+      return;
+    }
+
+    // Check for non-numeric characters
+    if (!/^[0-9]+$/.test(pin)) {
+      setError('PIN must contain only numbers');
+      setLoading(false);
+      return;
+    }
+
     try {
       const pinData = await verifyPin(pin);
 

@@ -202,13 +202,22 @@ export async function checkExistingScore(
     );
     const querySnapshot = await getDocs(q);
 
-    // Check if any score matches one of the participant IDs
-    const hasScore = querySnapshot.docs.some((doc) => {
-      const scoreData = doc.data();
-      return participantIds.includes(scoreData.participantId);
-    });
-
-    return hasScore;
+    // For multiple participants (combat), check if ALL have been scored
+    // For single participant, check if it has been scored
+    if (participantIds.length > 1) {
+      // Combat event - check if all participants have been scored
+      const scoredParticipantIds = querySnapshot.docs.map(
+        (doc) => doc.data().participantId
+      );
+      return participantIds.every((id) => scoredParticipantIds.includes(id));
+    } else {
+      // Single participant event - check if this participant has been scored
+      const hasScore = querySnapshot.docs.some((doc) => {
+        const scoreData = doc.data();
+        return participantIds.includes(scoreData.participantId);
+      });
+      return hasScore;
+    }
   } catch (error) {
     console.error('Error checking existing score:', error);
     return false;
@@ -314,4 +323,88 @@ export function subscribeToActiveParticipants(
       } as ActiveParticipants);
     }
   });
+}
+
+// Utility functions for testing/development
+export async function clearAllScores(): Promise<void> {
+  try {
+    const scoresRef = collection(db, 'scores');
+    const querySnapshot = await getDocs(scoresRef);
+
+    const deletePromises = querySnapshot.docs.map((doc) => deleteDoc(doc.ref));
+
+    await Promise.all(deletePromises);
+    console.log(`Deleted ${querySnapshot.docs.length} scores`);
+  } catch (error) {
+    console.error('Error clearing scores:', error);
+    throw error;
+  }
+}
+
+export async function populateDummyScores(): Promise<void> {
+  try {
+    // Get all necessary data
+    const [participantsData, eventsData, invigilatorsData, templatesData] =
+      await Promise.all([
+        getDocuments<Participant>('participants'),
+        getDocuments<Event>('events'),
+        getDocuments<Invigilator>('invigilators'),
+        getDocuments<Template>('templates'),
+      ]);
+
+    if (
+      participantsData.length === 0 ||
+      eventsData.length === 0 ||
+      invigilatorsData.length === 0
+    ) {
+      throw new Error(
+        'Need at least one participant, event, and invigilator to generate dummy scores'
+      );
+    }
+
+    const scores: Array<Omit<Score, 'id'>> = [];
+
+    // Generate scores for each event
+    for (const event of eventsData) {
+      const template = templatesData.find((t) => t.id === event.templateId);
+      if (!template) continue;
+
+      // Each invigilator scores each participant once per event
+      for (const invigilator of invigilatorsData) {
+        // Skip if invigilator is not assigned to this event
+        if (!invigilator.eventsAssigned?.includes(event.id!)) continue;
+
+        for (const participant of participantsData) {
+          // Generate random scores for each criteria
+          const criteriaScores = template.criteria.map((criteria) => ({
+            criteriaId: criteria.id,
+            score: Math.floor(Math.random() * (criteria.maxPoints + 1)),
+          }));
+
+          const total = criteriaScores.reduce((sum, cs) => sum + cs.score, 0);
+
+          scores.push({
+            eventId: event.id!,
+            templateId: template.id!,
+            participantId: participant.id!,
+            facultyId: participant.facultyId,
+            invigilatorId: invigilator.id!,
+            roundNumber: 1,
+            criteriaScores,
+            total,
+            timestamp: Date.now() - Math.floor(Math.random() * 86400000), // Random time in last 24h
+          });
+        }
+      }
+    }
+
+    // Add all scores to Firestore
+    const addPromises = scores.map((score) => addScore(score));
+    await Promise.all(addPromises);
+
+    console.log(`Successfully added ${scores.length} dummy scores`);
+  } catch (error) {
+    console.error('Error populating dummy scores:', error);
+    throw error;
+  }
 }
