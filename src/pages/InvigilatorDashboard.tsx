@@ -99,7 +99,10 @@ export function InvigilatorDashboard() {
       }
 
       // For single participant events like Skipping, pass facultyId to check if faculty already scored
-      const facultyId = selectedEvent.participantsRequired === 1 ? selectedParticipant.facultyId : undefined;
+      const facultyId =
+        selectedEvent.participantsRequired === 1
+          ? selectedParticipant.facultyId
+          : undefined;
 
       const hasScore = await checkExistingScore(
         selectedEvent.id,
@@ -405,7 +408,8 @@ export function InvigilatorDashboard() {
                       ⚠️ Setup Required
                     </div>
                     <div className="text-sm text-orange-800">
-                      The admin needs to go to the "Active Participants" tab and save participant selections first.
+                      The admin needs to go to the "Active Participants" tab and
+                      save participant selections first.
                     </div>
                   </div>
                 )}

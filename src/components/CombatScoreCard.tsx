@@ -82,35 +82,35 @@ export function CombatScoreCard({
   };
 
   return (
-    <div className="boxing-panel p-6 md:p-8">
+    <div className="boxing-panel p-3 sm:p-6 md:p-8">
       {/* Fighter Headers */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
-        <div className="text-center p-6 bg-gradient-to-br from-red-900/40 to-red-800/30 border border-red-500/30 rounded-xl backdrop-blur-sm">
-          <div className="text-sm text-gray-300 mb-2 tracking-wider uppercase font-semibold">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-6 mb-4 md:mb-8">
+        <div className="text-center p-3 sm:p-4 md:p-6 bg-gradient-to-br from-red-900/40 to-red-800/30 border border-red-500/30 rounded-lg md:rounded-xl backdrop-blur-sm">
+          <div className="text-xs sm:text-sm text-gray-300 mb-1 tracking-wider uppercase font-semibold">
             Fighter A
           </div>
-          <div className="text-2xl md:text-3xl font-bold text-white boxing-title">
+          <div className="text-lg sm:text-xl md:text-3xl font-bold text-white boxing-title leading-tight">
             {participant1.alias || participant1.name}
           </div>
           {faculty1 && (
             <div
-              className="text-sm font-semibold mt-2 tracking-wide"
+              className="text-xs sm:text-sm font-semibold mt-1 tracking-wide"
               style={{ color: faculty1.colorHex || '#EDEDED' }}
             >
               {faculty1.name}
             </div>
           )}
         </div>
-        <div className="text-center p-6 bg-gradient-to-br from-blue-900/40 to-blue-800/30 border border-blue-500/30 rounded-xl backdrop-blur-sm">
-          <div className="text-sm text-gray-300 mb-2 tracking-wider uppercase font-semibold">
+        <div className="text-center p-3 sm:p-4 md:p-6 bg-gradient-to-br from-blue-900/40 to-blue-800/30 border border-blue-500/30 rounded-lg md:rounded-xl backdrop-blur-sm">
+          <div className="text-xs sm:text-sm text-gray-300 mb-1 tracking-wider uppercase font-semibold">
             Fighter B
           </div>
-          <div className="text-2xl md:text-3xl font-bold text-white boxing-title">
+          <div className="text-lg sm:text-xl md:text-3xl font-bold text-white boxing-title leading-tight">
             {participant2.alias || participant2.name}
           </div>
           {faculty2 && (
             <div
-              className="text-sm font-semibold mt-2 tracking-wide"
+              className="text-xs sm:text-sm font-semibold mt-1 tracking-wide"
               style={{ color: faculty2.colorHex || '#EDEDED' }}
             >
               {faculty2.name}

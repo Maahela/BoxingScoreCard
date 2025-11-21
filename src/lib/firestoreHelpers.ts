@@ -222,7 +222,7 @@ export async function checkExistingScore(
           return true; // Faculty already scored by this invigilator
         }
       }
-      
+
       // Otherwise, check if this specific participant has been scored
       const hasScore = querySnapshot.docs.some((doc) => {
         const scoreData = doc.data();
@@ -370,15 +370,21 @@ export async function clearAllData(): Promise<void> {
     for (const collectionName of collections) {
       const collectionRef = collection(db, collectionName);
       const querySnapshot = await getDocs(collectionRef);
-      
-      const deletePromises = querySnapshot.docs.map((doc) => deleteDoc(doc.ref));
+
+      const deletePromises = querySnapshot.docs.map((doc) =>
+        deleteDoc(doc.ref)
+      );
       await Promise.all(deletePromises);
-      
-      console.log(`Deleted ${querySnapshot.docs.length} documents from ${collectionName}`);
+
+      console.log(
+        `Deleted ${querySnapshot.docs.length} documents from ${collectionName}`
+      );
       totalDeleted += querySnapshot.docs.length;
     }
 
-    console.log(`Total deleted: ${totalDeleted} documents across all collections`);
+    console.log(
+      `Total deleted: ${totalDeleted} documents across all collections`
+    );
   } catch (error) {
     console.error('Error clearing all data:', error);
     throw error;

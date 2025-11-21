@@ -18,7 +18,7 @@ export function PhaseScorecard({
 }: PhaseScorecardProps) {
   // Filter events by phase and remove duplicates based on event name
   const phaseEventsRaw = events.filter((e) => e.phase === phaseNumber);
-  
+
   // Remove duplicate events (same name) - this handles duplicate database entries
   const seenNames = new Set<string>();
   const phaseEvents = phaseEventsRaw.filter((event) => {
@@ -34,7 +34,7 @@ export function PhaseScorecard({
   const scoresByEventFaculty = new Map<string, Map<string, Score[]>>();
 
   // Debug: Check for duplicate score IDs
-  const scoreIds = scores.map(s => s.id).filter(id => id);
+  const scoreIds = scores.map((s) => s.id).filter((id) => id);
   const uniqueScoreIds = new Set(scoreIds);
   if (uniqueScoreIds.size !== scoreIds.length) {
     console.warn('Duplicate score IDs detected:', scores);
@@ -92,7 +92,7 @@ export function PhaseScorecard({
   const totalColumns = 1 + sortedFaculties.length * maxParticipantsPerFaculty;
 
   // Debug: Check for duplicate events
-  const uniqueEventIds = new Set(phaseEvents.map(e => e.id));
+  const uniqueEventIds = new Set(phaseEvents.map((e) => e.id));
   if (uniqueEventIds.size !== phaseEvents.length) {
     console.warn('Duplicate events detected in PhaseScorecard:', phaseEvents);
   }

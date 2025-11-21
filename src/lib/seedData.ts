@@ -63,9 +63,13 @@ async function seedData() {
     for (const collectionName of collections) {
       const collectionRef = collection(db, collectionName);
       const querySnapshot = await getDocs(collectionRef);
-      const deletePromises = querySnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      const deletePromises = querySnapshot.docs.map((doc) =>
+        deleteDoc(doc.ref)
+      );
       await Promise.all(deletePromises);
-      console.log(`✓ Cleared ${querySnapshot.docs.length} documents from ${collectionName}`);
+      console.log(
+        `✓ Cleared ${querySnapshot.docs.length} documents from ${collectionName}`
+      );
     }
     console.log('✅ All collections cleared!\n');
 

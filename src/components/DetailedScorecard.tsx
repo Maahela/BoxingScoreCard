@@ -18,7 +18,10 @@ export function DetailedScorecard({
   const seenNames = new Set<string>();
   const uniqueEvents = events.filter((event) => {
     if (seenNames.has(event.name)) {
-      console.warn('Duplicate event detected and removed in DetailedScorecard:', event.name);
+      console.warn(
+        'Duplicate event detected and removed in DetailedScorecard:',
+        event.name
+      );
       return false;
     }
     seenNames.add(event.name);
@@ -29,7 +32,7 @@ export function DetailedScorecard({
   const scoresByEventFaculty = new Map<string, Map<string, Score[]>>();
 
   // Debug: Check for duplicate score IDs
-  const scoreIds = scores.map(s => s.id).filter(id => id);
+  const scoreIds = scores.map((s) => s.id).filter((id) => id);
   const uniqueScoreIds = new Set(scoreIds);
   if (uniqueScoreIds.size !== scoreIds.length) {
     console.warn('Duplicate score IDs detected in DetailedScorecard:', scores);

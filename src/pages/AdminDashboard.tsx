@@ -63,7 +63,9 @@ export function AdminDashboard() {
           <div className="flex gap-2">
             <button
               onClick={() => {
-                alert('🌱 To seed the database:\n\n1. Open terminal\n2. Run: npm run seed\n\nThis will populate faculties, events, templates, participants, invigilators, and sample scores.');
+                alert(
+                  '🌱 To seed the database:\n\n1. Open terminal\n2. Run: npm run seed\n\nThis will populate faculties, events, templates, participants, invigilators, and sample scores.'
+                );
               }}
               className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
             >
@@ -87,7 +89,9 @@ export function AdminDashboard() {
                 }
                 try {
                   await clearAllData();
-                  alert('✅ All data cleared successfully! You can now run npm run seed to repopulate.');
+                  alert(
+                    '✅ All data cleared successfully! You can now run npm run seed to repopulate.'
+                  );
                   window.location.reload();
                 } catch (error) {
                   console.error('Error clearing data:', error);
