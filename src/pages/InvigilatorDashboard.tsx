@@ -38,7 +38,9 @@ export function InvigilatorDashboard() {
 
   // Automatically load active participant when event is selected
   useEffect(() => {
-    if (!selectedEvent || !activeParticipants) return;
+    if (!selectedEvent || !activeParticipants) {
+      return;
+    }
 
     let activeParticipantId: string | null = null;
     let activeParticipant2Id: string | null = null;
@@ -63,6 +65,8 @@ export function InvigilatorDashboard() {
       if (participant) {
         setSelectedParticipant(participant);
         setSelectedFaculty(participant.facultyId);
+      } else {
+        setSelectedParticipant(null);
       }
     } else {
       setSelectedParticipant(null);
@@ -94,10 +98,14 @@ export function InvigilatorDashboard() {
         participantIds.push(combatParticipant2.id);
       }
 
+      // For single participant events like Skipping, pass facultyId to check if faculty already scored
+      const facultyId = selectedEvent.participantsRequired === 1 ? selectedParticipant.facultyId : undefined;
+
       const hasScore = await checkExistingScore(
         selectedEvent.id,
         participantIds,
-        auth.invigilatorId
+        auth.invigilatorId,
+        facultyId
       );
       setAlreadyScored(hasScore);
     };
@@ -337,6 +345,42 @@ export function InvigilatorDashboard() {
                   </div>
                 </div>
               </>
+            ) : selectedParticipant ? (
+              <>
+                <div className="text-6xl mb-4">👤</div>
+                <h2 className="text-2xl font-bold mb-2">
+                  Active Participant Selected
+                </h2>
+                <div className="text-gray-600 mb-6">
+                  <p className="mb-4">
+                    The admin has selected:{' '}
+                    <span className="font-semibold text-lg text-gray-900">
+                      {selectedParticipant.alias || selectedParticipant.name}
+                    </span>
+                    {combatParticipant2 && (
+                      <>
+                        {' '}
+                        and{' '}
+                        <span className="font-semibold text-lg text-gray-900">
+                          {combatParticipant2.alias || combatParticipant2.name}
+                        </span>
+                      </>
+                    )}
+                  </p>
+                  <p className="text-sm">
+                    But you have already scored{' '}
+                    {selectedEvent.name === 'Boxing Combat'
+                      ? 'these participants'
+                      : 'this participant'}{' '}
+                    before.
+                  </p>
+                </div>
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg inline-block">
+                  <div className="text-sm font-medium text-yellow-900">
+                    Waiting for admin to select new participants...
+                  </div>
+                </div>
+              </>
             ) : (
               <>
                 <div className="text-6xl mb-4">⏳</div>
@@ -348,13 +392,23 @@ export function InvigilatorDashboard() {
                   {selectedEvent.name === 'Boxing Combat' ? 's' : ''} for this
                   event. Your screen will update automatically.
                 </p>
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg inline-block">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg inline-block mb-4">
                   <div className="text-sm font-medium text-blue-900">
                     {selectedEvent.name === 'Boxing Combat'
                       ? 'Waiting for both combat participants...'
                       : 'Waiting for participant selection...'}
                   </div>
                 </div>
+                {!activeParticipants && (
+                  <div className="p-4 bg-orange-50 border border-orange-300 rounded-lg inline-block">
+                    <div className="text-sm font-semibold text-orange-900 mb-1">
+                      ⚠️ Setup Required
+                    </div>
+                    <div className="text-sm text-orange-800">
+                      The admin needs to go to the "Active Participants" tab and save participant selections first.
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -368,7 +422,7 @@ export function InvigilatorDashboard() {
   const isCombat = selectedEvent.name === 'Boxing Combat';
   const combatFaculty2 = combatParticipant2
     ? faculties.find((f) => f.id === combatParticipant2.facultyId)
-    : null;
+    : undefined;
 
   return (
     <div

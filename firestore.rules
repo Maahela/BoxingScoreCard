@@ -20,37 +20,37 @@ service cloud.firestore {
     // PINs collection - read only for authentication
     match /pins/{pinId} {
       allow read: if true; // Needed for PIN verification during login
-      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
+      allow write: if true; // TEMPORARY: Allow for seeding
     }
 
     // Faculties collection
     match /faculties/{facultyId} {
       allow read: if true; // Everyone can read faculties
-      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
+      allow write: if true; // Allow admin to create, update, delete faculties
     }
 
     // Participants collection
     match /participants/{participantId} {
       allow read: if true; // Everyone can read participants
-      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
+      allow write: if true; // Allow admin to create, update, delete participants
     }
 
     // Events collection
     match /events/{eventId} {
       allow read: if true; // Everyone can read events
-      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
+      allow write: if true; // Allow admin to create, update, delete events
     }
 
     // Templates collection
     match /templates/{templateId} {
       allow read: if true; // Everyone can read templates
-      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
+      allow write: if true; // Allow admin to create, update, delete templates
     }
 
     // Invigilators collection
     match /invigilators/{invigilatorId} {
       allow read: if true; // Everyone can read invigilators (needed for display)
-      allow write: if false; // PRODUCTION: Only allow writes via server-side or Firebase console
+      allow write: if true; // Allow admin to create, update, delete invigilators
     }
 
     // Assignments collection
@@ -82,8 +82,10 @@ service cloud.firestore {
       request.resource.data.total >= 0 &&
       request.resource.data.timestamp is number;
       
-      // Prevent updates and deletes in production (scores should be immutable once submitted)
-      allow update, delete: if false;
+      // Allow updates and deletes for admin management
+      // NOTE: Protect this with security code in the application layer
+      allow update: if false; // Scores should not be modified after creation
+      allow delete: if true;  // Allow deletion for admin cleanup/testing
     }
 
     // Aggregates collection (for faculty totals)

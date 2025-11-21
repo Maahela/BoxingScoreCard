@@ -16,11 +16,29 @@ export function PhaseScorecard({
   participants,
   phaseNumber,
 }: PhaseScorecardProps) {
-  // Filter events by phase
-  const phaseEvents = events.filter((e) => e.phase === phaseNumber);
+  // Filter events by phase and remove duplicates based on event name
+  const phaseEventsRaw = events.filter((e) => e.phase === phaseNumber);
+  
+  // Remove duplicate events (same name) - this handles duplicate database entries
+  const seenNames = new Set<string>();
+  const phaseEvents = phaseEventsRaw.filter((event) => {
+    if (seenNames.has(event.name)) {
+      console.warn('Duplicate event detected and removed:', event.name);
+      return false;
+    }
+    seenNames.add(event.name);
+    return true;
+  });
 
   // Group scores by event and faculty
   const scoresByEventFaculty = new Map<string, Map<string, Score[]>>();
+
+  // Debug: Check for duplicate score IDs
+  const scoreIds = scores.map(s => s.id).filter(id => id);
+  const uniqueScoreIds = new Set(scoreIds);
+  if (uniqueScoreIds.size !== scoreIds.length) {
+    console.warn('Duplicate score IDs detected:', scores);
+  }
 
   scores.forEach((score) => {
     if (!scoresByEventFaculty.has(score.eventId)) {
@@ -72,6 +90,12 @@ export function PhaseScorecard({
 
   // Calculate total columns based on max participants
   const totalColumns = 1 + sortedFaculties.length * maxParticipantsPerFaculty;
+
+  // Debug: Check for duplicate events
+  const uniqueEventIds = new Set(phaseEvents.map(e => e.id));
+  if (uniqueEventIds.size !== phaseEvents.length) {
+    console.warn('Duplicate events detected in PhaseScorecard:', phaseEvents);
+  }
 
   return (
     <div className="overflow-x-auto space-y-6">
@@ -369,11 +393,6 @@ export function PhaseScorecard({
                   })}
                 </tr>
               )}
-
-              {/* Spacing row */}
-              <tr className="bg-gray-900">
-                <td colSpan={totalColumns} className="h-4"></td>
-              </tr>
 
               {/* Phase Total Row - only show in last event table */}
               {isLastEvent && (

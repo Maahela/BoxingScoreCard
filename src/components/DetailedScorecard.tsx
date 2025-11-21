@@ -14,8 +14,26 @@ export function DetailedScorecard({
   scores,
   participants,
 }: DetailedScorecardProps) {
+  // Remove duplicate events (same name) - this handles duplicate database entries
+  const seenNames = new Set<string>();
+  const uniqueEvents = events.filter((event) => {
+    if (seenNames.has(event.name)) {
+      console.warn('Duplicate event detected and removed in DetailedScorecard:', event.name);
+      return false;
+    }
+    seenNames.add(event.name);
+    return true;
+  });
+
   // Group scores by event and faculty
   const scoresByEventFaculty = new Map<string, Map<string, Score[]>>();
+
+  // Debug: Check for duplicate score IDs
+  const scoreIds = scores.map(s => s.id).filter(id => id);
+  const uniqueScoreIds = new Set(scoreIds);
+  if (uniqueScoreIds.size !== scoreIds.length) {
+    console.warn('Duplicate score IDs detected in DetailedScorecard:', scores);
+  }
 
   scores.forEach((score) => {
     if (!scoresByEventFaculty.has(score.eventId)) {
@@ -32,7 +50,7 @@ export function DetailedScorecard({
   const facultyTotals = new Map<string, number>();
   faculties.forEach((faculty) => {
     let total = 0;
-    events.forEach((event) => {
+    uniqueEvents.forEach((event) => {
       const eventScores =
         scoresByEventFaculty.get(event.id)?.get(faculty.id) || [];
       if (eventScores.length > 0) {
@@ -53,7 +71,7 @@ export function DetailedScorecard({
 
   // Find the maximum number of participants per faculty across all events
   const maxParticipantsPerFaculty = Math.max(
-    ...events.map((event) =>
+    ...uniqueEvents.map((event) =>
       Math.max(
         ...sortedFaculties.map((faculty) => {
           const facultyScores =
@@ -68,10 +86,10 @@ export function DetailedScorecard({
   const totalColumns = 1 + sortedFaculties.length * maxParticipantsPerFaculty;
 
   return (
-    <div className="overflow-x-auto space-y-6">
+    <div className="overflow-x-auto">
       {/* Individual Event Tables */}
-      {events.map((event, eventIndex) => {
-        const isLastEvent = eventIndex === events.length - 1;
+      {uniqueEvents.map((event, eventIndex) => {
+        const isLastEvent = eventIndex === uniqueEvents.length - 1;
 
         return (
           <table key={event.id} className="w-full border-collapse text-sm">
@@ -363,11 +381,6 @@ export function DetailedScorecard({
                   })}
                 </tr>
               )}
-
-              {/* Spacing row */}
-              <tr className="bg-gray-900">
-                <td colSpan={totalColumns} className="h-4"></td>
-              </tr>
 
               {/* Grand Total Row - only show in last event table */}
               {isLastEvent && (

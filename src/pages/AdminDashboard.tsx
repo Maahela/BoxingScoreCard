@@ -17,6 +17,7 @@ import {
   deleteDocument,
   clearAllScores,
   populateDummyScores,
+  clearAllData,
 } from '@/lib/firestoreHelpers';
 import { ActiveParticipantsPanel } from '@/components/ActiveParticipantsPanel';
 import type {
@@ -59,9 +60,48 @@ export function AdminDashboard() {
               Welcome, {auth.name || 'Admin'}
             </p>
           </div>
-          <button onClick={handleLogout} className="btn btn-secondary">
-            Logout
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                alert('🌱 To seed the database:\n\n1. Open terminal\n2. Run: npm run seed\n\nThis will populate faculties, events, templates, participants, invigilators, and sample scores.');
+              }}
+              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              🌱 Seed Database
+            </button>
+            <button
+              onClick={async () => {
+                const securityCode = prompt(
+                  '⚠️ DANGER: This will delete ALL data (events, participants, faculties, scores, everything). Enter security code:'
+                );
+                if (securityCode !== 'Boxing123abc') {
+                  alert('❌ Incorrect security code. Operation cancelled.');
+                  return;
+                }
+                if (
+                  !confirm(
+                    '🚨 FINAL WARNING: This will permanently delete ALL data from the entire database. This cannot be undone. Are you absolutely sure?'
+                  )
+                ) {
+                  return;
+                }
+                try {
+                  await clearAllData();
+                  alert('✅ All data cleared successfully! You can now run npm run seed to repopulate.');
+                  window.location.reload();
+                } catch (error) {
+                  console.error('Error clearing data:', error);
+                  alert('❌ Failed to clear data. Check console for details.');
+                }
+              }}
+              className="px-3 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              🗑️ Clear ALL Data
+            </button>
+            <button onClick={handleLogout} className="btn btn-secondary">
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 

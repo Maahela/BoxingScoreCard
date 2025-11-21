@@ -5,6 +5,8 @@ import {
   addDoc,
   setDoc,
   doc,
+  getDocs,
+  deleteDoc,
 } from 'firebase/firestore';
 import * as dotenv from 'dotenv';
 
@@ -44,6 +46,28 @@ async function seedData() {
     console.log('Starting in 3 seconds...\n');
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    // Clear all existing data first
+    console.log('🗑️ Clearing existing data...');
+    const collections = [
+      'scores',
+      'participants',
+      'events',
+      'templates',
+      'faculties',
+      'invigilators',
+      'activeParticipants',
+      'pins',
+    ];
+
+    for (const collectionName of collections) {
+      const collectionRef = collection(db, collectionName);
+      const querySnapshot = await getDocs(collectionRef);
+      const deletePromises = querySnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      console.log(`✓ Cleared ${querySnapshot.docs.length} documents from ${collectionName}`);
+    }
+    console.log('✅ All collections cleared!\n');
 
     // 1. Create PINs for authentication
     console.log('Creating PINs...');
@@ -1253,6 +1277,19 @@ async function seedData() {
       await addDoc(collection(db, 'scores'), score);
     }
     console.log(`✓ Created ${dummyScores.length} dummy scores`);
+
+    // 8. Create Active Participants document
+    console.log('Creating active participants document...');
+    await setDoc(doc(db, 'activeParticipants', 'current'), {
+      skipping: participantIds[0], // UCSC - Thunder
+      shadowBoxing: participantIds[0], // UCSC - Thunder
+      punchingBag: participantIds[0], // UCSC - Thunder
+      combat: {
+        participant1: participantIds[0], // UCSC - Thunder
+        participant2: participantIds[1], // UCSC - Lightning
+      },
+    });
+    console.log('✓ Created active participants document');
 
     console.log('\n✅ Data seeding completed successfully!');
     console.log('\n📌 Login PINs:');

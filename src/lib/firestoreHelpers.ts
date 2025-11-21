@@ -12,7 +12,6 @@ import {
   onSnapshot,
   QueryConstraint,
   DocumentData,
-  Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type {
@@ -191,7 +190,8 @@ export async function getScoresByFaculty(facultyId: string): Promise<Score[]> {
 export async function checkExistingScore(
   eventId: string,
   participantIds: string[],
-  invigilatorId: string
+  invigilatorId: string,
+  facultyId?: string
 ): Promise<boolean> {
   try {
     const scoresRef = collection(db, 'scores');
@@ -211,7 +211,19 @@ export async function checkExistingScore(
       );
       return participantIds.every((id) => scoredParticipantIds.includes(id));
     } else {
-      // Single participant event - check if this participant has been scored
+      // Single participant event
+      // For events with 1 participant per faculty (like Skipping), check if ANY participant from this faculty has been scored
+      if (facultyId) {
+        const hasScoreForFaculty = querySnapshot.docs.some((doc) => {
+          const scoreData = doc.data();
+          return scoreData.facultyId === facultyId;
+        });
+        if (hasScoreForFaculty) {
+          return true; // Faculty already scored by this invigilator
+        }
+      }
+      
+      // Otherwise, check if this specific participant has been scored
       const hasScore = querySnapshot.docs.some((doc) => {
         const scoreData = doc.data();
         return participantIds.includes(scoreData.participantId);
@@ -337,6 +349,96 @@ export async function clearAllScores(): Promise<void> {
     console.log(`Deleted ${querySnapshot.docs.length} scores`);
   } catch (error) {
     console.error('Error clearing scores:', error);
+    throw error;
+  }
+}
+
+export async function clearAllData(): Promise<void> {
+  try {
+    const collections = [
+      'scores',
+      'participants',
+      'events',
+      'templates',
+      'faculties',
+      'invigilators',
+      'activeParticipants',
+    ];
+
+    let totalDeleted = 0;
+
+    for (const collectionName of collections) {
+      const collectionRef = collection(db, collectionName);
+      const querySnapshot = await getDocs(collectionRef);
+      
+      const deletePromises = querySnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      
+      console.log(`Deleted ${querySnapshot.docs.length} documents from ${collectionName}`);
+      totalDeleted += querySnapshot.docs.length;
+    }
+
+    console.log(`Total deleted: ${totalDeleted} documents across all collections`);
+  } catch (error) {
+    console.error('Error clearing all data:', error);
+    throw error;
+  }
+}
+
+export async function populateDefaultEvents(): Promise<void> {
+  try {
+    // Check if events already exist
+    const existingEvents = await getEvents();
+    if (existingEvents.length > 0) {
+      console.log('Events already exist, skipping population');
+      return;
+    }
+
+    const defaultEvents: Array<Omit<Event, 'id'>> = [
+      {
+        name: 'Shadow Boxing',
+        shortName: 'Shadow',
+        templateId: '', // Will be set in admin
+        order: 1,
+        isCombat: false,
+        phase: 1,
+        participantsRequired: 2,
+      },
+      {
+        name: 'Heavy Bag',
+        shortName: 'Bag',
+        templateId: '', // Will be set in admin
+        order: 2,
+        isCombat: false,
+        phase: 1,
+        participantsRequired: 2,
+      },
+      {
+        name: 'Skipping',
+        shortName: 'Skip',
+        templateId: '', // Will be set in admin
+        order: 3,
+        isCombat: false,
+        phase: 1,
+        participantsRequired: 1,
+      },
+      {
+        name: 'Boxing Combat',
+        shortName: 'Combat',
+        templateId: '', // Will be set in admin
+        order: 4,
+        isCombat: true,
+        phase: 2,
+        participantsRequired: 2,
+      },
+    ];
+
+    const addPromises = defaultEvents.map((event) => addEvent(event));
+    await Promise.all(addPromises);
+
+    console.log(`Successfully added ${defaultEvents.length} default events`);
+  } catch (error) {
+    console.error('Error populating default events:', error);
     throw error;
   }
 }
