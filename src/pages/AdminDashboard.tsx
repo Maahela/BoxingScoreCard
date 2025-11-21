@@ -314,10 +314,10 @@ function ParticipantsPanel({
         <h2 className="text-xl font-bold">Participants</h2>
         <button
           onClick={() => {
-            if (showForm && !editingId) {
-              setShowForm(false);
-            } else {
+            if (showForm) {
               handleCancelEdit();
+            } else {
+              setShowForm(true);
             }
           }}
           className="btn btn-primary"
