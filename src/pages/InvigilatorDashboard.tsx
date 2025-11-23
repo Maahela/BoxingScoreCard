@@ -36,6 +36,12 @@ export function InvigilatorDashboard() {
   const [submitted, setSubmitted] = useState(false);
   const [alreadyScored, setAlreadyScored] = useState(false);
 
+  // Get admin-controlled active round (for skipping only)
+  const activeSkippingRound = activeParticipants?.activeSkippingRound || 1;
+
+  // Get admin-controlled active phase
+  const activePhase = activeParticipants?.activePhase || 1;
+
   // Automatically load active participant when event is selected
   useEffect(() => {
     if (!selectedEvent || !activeParticipants) {
@@ -55,6 +61,10 @@ export function InvigilatorDashboard() {
     } else if (selectedEvent.name === 'Boxing Combat') {
       activeParticipantId = activeParticipants.combat.participant1;
       activeParticipant2Id = activeParticipants.combat.participant2;
+      console.log('Combat participants updated:', {
+        participant1: activeParticipantId,
+        participant2: activeParticipant2Id,
+      });
     }
 
     // Load participant 1
@@ -63,9 +73,11 @@ export function InvigilatorDashboard() {
         (p) => p.id === activeParticipantId
       );
       if (participant) {
+        console.log('Setting participant 1:', participant.name);
         setSelectedParticipant(participant);
         setSelectedFaculty(participant.facultyId);
       } else {
+        console.warn('Participant 1 not found:', activeParticipantId);
         setSelectedParticipant(null);
       }
     } else {
@@ -78,7 +90,11 @@ export function InvigilatorDashboard() {
         (p) => p.id === activeParticipant2Id
       );
       if (participant) {
+        console.log('Setting participant 2:', participant.name);
         setCombatParticipant2(participant);
+      } else {
+        console.warn('Participant 2 not found:', activeParticipant2Id);
+        setCombatParticipant2(null);
       }
     } else {
       setCombatParticipant2(null);
@@ -108,7 +124,8 @@ export function InvigilatorDashboard() {
         selectedEvent.id,
         participantIds,
         auth.invigilatorId,
-        facultyId
+        facultyId,
+        activeSkippingRound
       );
       setAlreadyScored(hasScore);
     };
@@ -119,11 +136,12 @@ export function InvigilatorDashboard() {
     selectedParticipant,
     combatParticipant2,
     auth.invigilatorId,
+    activeSkippingRound,
   ]);
 
-  // Filter events assigned to this invigilator
-  const assignedEvents = events.filter((e) =>
-    auth.eventsAssigned?.includes(e.id)
+  // Filter events assigned to this invigilator AND match current active phase
+  const assignedEvents = events.filter(
+    (e) => auth.eventsAssigned?.includes(e.id) && e.phase === activePhase
   );
 
   const handleEventSelect = async (event: Event) => {
@@ -174,14 +192,15 @@ export function InvigilatorDashboard() {
     const total = scores.reduce((sum, s) => sum + s.score, 0);
 
     try {
-      // Submit score for participant 1
+      // Submit score for participant 1 (use admin-controlled active round for skipping)
       await addScore({
         eventId: selectedEvent.id,
         templateId: template.id,
         participantId: selectedParticipant.id,
         facultyId: selectedParticipant.facultyId,
         invigilatorId: auth.invigilatorId,
-        roundNumber: 1,
+        roundNumber:
+          selectedEvent.name === 'Skipping' ? activeSkippingRound : 1,
         criteriaScores: scores.map((s) => ({
           criteriaId: s.criteriaId,
           score: s.score,
@@ -260,7 +279,26 @@ export function InvigilatorDashboard() {
 
         <div className="card">
           <h2 className="text-xl font-semibold mb-4">Select Event</h2>
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg text-sm">
+
+          {/* Active Phase Indicator */}
+          <div
+            className={`mb-4 p-4 rounded-lg border-2 ${
+              activePhase === 1
+                ? 'bg-blue-50 border-blue-500'
+                : 'bg-red-50 border-red-500'
+            }`}
+          >
+            <div className="font-bold text-lg mb-2">
+              {activePhase === 1 ? '🔵 Phase 1 Active' : '🔴 Phase 2 Active'}
+            </div>
+            <div className="text-sm text-gray-700">
+              {activePhase === 1
+                ? 'Shadow Boxing, Punching Bag, and Skipping events are available'
+                : 'Boxing Combat event is now active'}
+            </div>
+          </div>
+
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
             <div className="font-semibold mb-1">Tournament Structure:</div>
             <div>
               • Phase 1: Shadow Boxing, Punching Bag, Skipping (simultaneous)
@@ -299,8 +337,13 @@ export function InvigilatorDashboard() {
     );
   }
 
+  // For Combat events, check if BOTH participants are selected
+  const isCombatEvent = selectedEvent.name === 'Boxing Combat';
+  const combatParticipantsMissing =
+    isCombatEvent && (!selectedParticipant || !combatParticipant2);
+
   // View: Waiting for admin to select active participant OR already scored
-  if (!selectedParticipant || alreadyScored) {
+  if (!selectedParticipant || alreadyScored || combatParticipantsMissing) {
     return (
       <div className="min-h-screen bg-gray-100 p-4">
         <header className="mb-6">
@@ -318,7 +361,40 @@ export function InvigilatorDashboard() {
 
         <div className="card">
           <div className="text-center py-12">
-            {alreadyScored ? (
+            {combatParticipantsMissing ? (
+              <>
+                <div className="text-6xl mb-4">⚠️</div>
+                <h2 className="text-2xl font-bold mb-2">
+                  Incomplete Combat Setup
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Boxing Combat requires BOTH participants to be selected.
+                </p>
+                <div className="p-4 bg-red-50 border border-red-300 rounded-lg inline-block">
+                  <div className="text-sm font-semibold text-red-900 mb-2">
+                    Current Selection:
+                  </div>
+                  <div className="text-sm text-red-800 text-left">
+                    <div>
+                      Participant 1:{' '}
+                      {selectedParticipant
+                        ? selectedParticipant.alias || selectedParticipant.name
+                        : '❌ Not selected'}
+                    </div>
+                    <div>
+                      Participant 2:{' '}
+                      {combatParticipant2
+                        ? combatParticipant2.alias || combatParticipant2.name
+                        : '❌ Not selected'}
+                    </div>
+                  </div>
+                  <div className="text-sm text-red-800 mt-3 font-medium">
+                    Please ask admin to select both participants in the Active
+                    Participants panel.
+                  </div>
+                </div>
+              </>
+            ) : alreadyScored ? (
               <>
                 <div className="text-6xl mb-4">✅</div>
                 <h2 className="text-2xl font-bold mb-2">Already Scored</h2>
@@ -430,24 +506,24 @@ export function InvigilatorDashboard() {
 
   return (
     <div
-      className={`min-h-screen p-4 pb-32 ${
+      className={`min-h-screen p-2 sm:p-4 pb-24 sm:pb-32 ${
         isCombat ? 'bg-gray-900' : 'bg-gray-100'
       }`}
     >
       {/* Combat Header */}
       {isCombat && (
-        <header className="mb-6">
+        <header className="mb-4 sm:mb-6">
           <button
             onClick={() => {
               setSelectedEvent(null);
               setSelectedParticipant(null);
               setCombatParticipant2(null);
             }}
-            className="text-white bg-black/30 px-4 py-2 rounded-lg border border-white/20 hover:bg-black/50 transition-all mb-2"
+            className="text-white bg-black/30 px-3 sm:px-4 py-2 rounded-lg border border-white/20 hover:bg-black/50 transition-all mb-2 text-sm sm:text-base"
           >
             ← Back to Events
           </button>
-          <h1 className="text-3xl md:text-4xl font-bold boxing-title text-white drop-shadow-lg">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold boxing-title text-white drop-shadow-lg">
             {selectedEvent.name}
           </h1>
         </header>
@@ -521,6 +597,23 @@ export function InvigilatorDashboard() {
         )}
       </div>
 
+      {/* Skipping active round indicator */}
+      {selectedEvent.name === 'Skipping' && (
+        <div className="max-w-3xl mx-auto mt-4 mb-2">
+          <div className="p-4 bg-green-50 border-2 border-green-500 rounded-lg">
+            <div className="text-center">
+              <div className="text-sm text-gray-600 mb-1">Active Round</div>
+              <div className="text-2xl font-bold text-green-700">
+                Skipping - Round {activeSkippingRound}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                (Admin-controlled)
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {template && (
         <div className={isCombat ? 'max-w-5xl mx-auto' : ''}>
           {isCombat && combatParticipant2 ? (
@@ -554,13 +647,13 @@ export function InvigilatorDashboard() {
 
       {/* Fixed Submit Button */}
       <div
-        className={`fixed bottom-0 left-0 right-0 p-4 border-t shadow-lg z-20 ${
+        className={`fixed bottom-0 left-0 right-0 p-3 sm:p-4 border-t shadow-lg z-20 ${
           isCombat ? 'bg-black/70 backdrop-blur-lg border-white/20' : 'bg-white'
         }`}
       >
         {submitted ? (
           <div
-            className={`btn w-full text-lg pointer-events-none ${
+            className={`btn w-full text-base sm:text-lg pointer-events-none ${
               isCombat ? 'bg-green-600 text-white' : 'btn-success'
             }`}
           >
@@ -569,13 +662,15 @@ export function InvigilatorDashboard() {
         ) : (
           <button
             onClick={handleSubmit}
-            className={`btn w-full text-lg font-bold ${
+            className={`btn w-full font-bold ${
               isCombat
-                ? 'bg-gradient-to-r from-red-600 to-blue-600 text-white hover:from-red-700 hover:to-blue-700 py-4 text-xl'
-                : 'btn-primary'
+                ? 'bg-gradient-to-r from-red-600 to-blue-600 text-white hover:from-red-700 hover:to-blue-700 py-3 sm:py-4 text-lg sm:text-xl'
+                : 'btn-primary text-lg'
             }`}
           >
-            Submit {isCombat && combatParticipant2 ? 'Both ' : ''}Scores
+            {selectedEvent.name === 'Skipping'
+              ? `Submit Skipping R${activeSkippingRound} Score`
+              : `Submit ${isCombat && combatParticipant2 ? 'Both ' : ''}Scores`}
           </button>
         )}
       </div>

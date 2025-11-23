@@ -171,7 +171,74 @@ export async function addInvigilator(
 // Score helpers
 export async function addScore(score: Omit<Score, 'id'>): Promise<string> {
   try {
+    // Add the score document first
     const id = await addDocument<Score>('scores', score);
+
+    // Special handling for Skipping event: store round-specific fields and compute final when both rounds available
+    try {
+      const eventDoc = await getDocument<Event>('events', score.eventId);
+      if (eventDoc && eventDoc.name === 'Skipping') {
+        // If round 1, update the created doc with skippingRound1Score
+        const scoresRef = collection(db, 'scores');
+        if (score.roundNumber === 1) {
+          const docRef = doc(db, 'scores', id);
+          await updateDoc(docRef, { skippingRound1Score: score.total });
+        }
+
+        // If round 2, find corresponding round 1 score for same participant AND invigilator to prevent mismatches
+        if (score.roundNumber === 2) {
+          // Find the matching round 1 score by participantId + invigilatorId (most specific match)
+          const q = query(
+            scoresRef,
+            where('eventId', '==', score.eventId),
+            where('participantId', '==', score.participantId),
+            where('invigilatorId', '==', score.invigilatorId),
+            where('roundNumber', '==', 1)
+          );
+          const querySnapshot = await getDocs(q);
+          let round1Total: number | null = null;
+          let round1DocId: string | null = null;
+          if (!querySnapshot.empty) {
+            const docSnap = querySnapshot.docs[0];
+            round1Total = docSnap.data().total;
+            round1DocId = docSnap.id;
+          }
+
+          const round2Total = score.total;
+          const docRef2 = doc(db, 'scores', id);
+
+          // Update round2 doc with its round value
+          const updates: any = { skippingRound2Score: round2Total };
+
+          if (round1Total !== null) {
+            const final = (round1Total + round2Total) / 2;
+            updates.skippingFinalScore = final;
+
+            // Also update the round1 doc to include skippingRound1Score (if not present)
+            if (round1DocId) {
+              const round1Ref = doc(db, 'scores', round1DocId);
+              const r1Snap = await getDoc(round1Ref);
+              if (r1Snap.exists()) {
+                const r1Data = r1Snap.data();
+                const r1Updates: any = {};
+                if (r1Data && r1Data.skippingRound1Score === undefined) {
+                  r1Updates.skippingRound1Score = round1Total;
+                }
+                if (Object.keys(r1Updates).length > 0) {
+                  await updateDoc(round1Ref, r1Updates);
+                }
+              }
+            }
+          }
+
+          await updateDoc(docRef2, updates);
+        }
+      }
+    } catch (err) {
+      // Non-fatal: log and continue
+      console.error('Skipping special handling error:', err);
+    }
+
     return id;
   } catch (error) {
     console.error('Error adding score:', error);
@@ -191,24 +258,29 @@ export async function checkExistingScore(
   eventId: string,
   participantIds: string[],
   invigilatorId: string,
-  facultyId?: string
+  facultyId?: string,
+  roundNumber?: number
 ): Promise<boolean> {
   try {
     const scoresRef = collection(db, 'scores');
-    const q = query(
-      scoresRef,
+    const constraints: any[] = [
       where('eventId', '==', eventId),
-      where('invigilatorId', '==', invigilatorId)
-    );
+      where('invigilatorId', '==', invigilatorId),
+    ];
+    if (roundNumber !== undefined) {
+      constraints.push(where('roundNumber', '==', roundNumber));
+    }
+    const q = query(scoresRef, ...constraints);
     const querySnapshot = await getDocs(q);
 
-    // For multiple participants (combat), check if ALL have been scored
-    // For single participant, check if it has been scored
+    // For multiple participants (combat), check if these SPECIFIC participants have been scored
     if (participantIds.length > 1) {
-      // Combat event - check if all participants have been scored
+      // Combat event - check if these exact participants have ALL been scored
       const scoredParticipantIds = querySnapshot.docs.map(
         (doc) => doc.data().participantId
       );
+
+      // Every participant in participantIds must have a score
       return participantIds.every((id) => scoredParticipantIds.includes(id));
     } else {
       // Single participant event
@@ -219,7 +291,7 @@ export async function checkExistingScore(
           return scoreData.facultyId === facultyId;
         });
         if (hasScoreForFaculty) {
-          return true; // Faculty already scored by this invigilator
+          return true; // Faculty already scored by this invigilator for the given round (if roundNumber used)
         }
       }
 
@@ -300,6 +372,8 @@ export async function getActiveParticipants(): Promise<ActiveParticipants | null
       participant1: data.combat?.participant1 || null,
       participant2: data.combat?.participant2 || null,
     },
+    activeSkippingRound: data.activeSkippingRound || 1,
+    activePhase: data.activePhase || 1,
   } as ActiveParticipants;
 }
 
@@ -332,6 +406,8 @@ export function subscribeToActiveParticipants(
           participant1: docData.combat?.participant1 || null,
           participant2: docData.combat?.participant2 || null,
         },
+        activeSkippingRound: docData.activeSkippingRound || 1,
+        activePhase: docData.activePhase || 1,
       } as ActiveParticipants);
     }
   });
@@ -477,12 +553,35 @@ export async function populateDummyScores(): Promise<void> {
       const template = templatesData.find((t) => t.id === event.templateId);
       if (!template) continue;
 
-      // Each invigilator scores each participant once per event
-      for (const invigilator of invigilatorsData) {
-        // Skip if invigilator is not assigned to this event
-        if (!invigilator.eventsAssigned?.includes(event.id!)) continue;
+      // Filter participants assigned to this event
+      const eventParticipants = participantsData.filter((p) =>
+        p.events.includes(event.id!)
+      );
 
-        for (const participant of participantsData) {
+      // Find the invigilator assigned to this event
+      const invigilator = invigilatorsData.find((inv) =>
+        inv.eventsAssigned?.includes(event.id!)
+      );
+      if (!invigilator) continue;
+
+      // Group participants by faculty
+      const participantsByFaculty = new Map<string, Participant[]>();
+      for (const participant of eventParticipants) {
+        if (!participantsByFaculty.has(participant.facultyId)) {
+          participantsByFaculty.set(participant.facultyId, []);
+        }
+        participantsByFaculty.get(participant.facultyId)!.push(participant);
+      }
+
+      // Score participants according to event requirements
+      for (const [_facultyId, facultyParticipants] of participantsByFaculty) {
+        // For each faculty, only score up to participantsRequired number of participants
+        const participantsToScore = facultyParticipants.slice(
+          0,
+          event.participantsRequired
+        );
+
+        for (const participant of participantsToScore) {
           // Generate random scores for each criteria
           const criteriaScores = template.criteria.map((criteria) => ({
             criteriaId: criteria.id,
@@ -491,6 +590,7 @@ export async function populateDummyScores(): Promise<void> {
 
           const total = criteriaScores.reduce((sum, cs) => sum + cs.score, 0);
 
+          // Round 1 score
           scores.push({
             eventId: event.id!,
             templateId: template.id!,
@@ -502,6 +602,31 @@ export async function populateDummyScores(): Promise<void> {
             total,
             timestamp: Date.now() - Math.floor(Math.random() * 86400000), // Random time in last 24h
           });
+
+          // For Skipping event, also add Round 2 scores
+          if (event.name === 'Skipping') {
+            const criteriaScoresR2 = template.criteria.map((criteria) => ({
+              criteriaId: criteria.id,
+              score: Math.floor(Math.random() * (criteria.maxPoints + 1)),
+            }));
+
+            const totalR2 = criteriaScoresR2.reduce(
+              (sum, cs) => sum + cs.score,
+              0
+            );
+
+            scores.push({
+              eventId: event.id!,
+              templateId: template.id!,
+              participantId: participant.id!,
+              facultyId: participant.facultyId,
+              invigilatorId: invigilator.id!,
+              roundNumber: 2,
+              criteriaScores: criteriaScoresR2,
+              total: totalR2,
+              timestamp: Date.now() - Math.floor(Math.random() * 43200000), // Random time in last 12h (after R1)
+            });
+          }
         }
       }
     }

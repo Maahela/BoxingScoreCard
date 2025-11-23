@@ -57,10 +57,25 @@ export function DetailedScorecard({
       const eventScores =
         scoresByEventFaculty.get(event.id)?.get(faculty.id) || [];
       if (eventScores.length > 0) {
-        const sum = eventScores.reduce((acc, s) => acc + s.total, 0);
-        // Average for 2-participant events, direct score for 1-participant events
-        const eventScore =
-          event.participantsRequired === 2 ? sum / eventScores.length : sum;
+        // Skipping special handling: average of round 1 & 2 if both present
+        let eventScore: number;
+        if (event.name === 'Skipping') {
+          const r1 = eventScores.find((s) => s.roundNumber === 1);
+          const r2 = eventScores.find((s) => s.roundNumber === 2);
+          if (r1 && r2) {
+            eventScore = (r1.total + r2.total) / 2;
+          } else if (r1) {
+            eventScore = r1.total;
+          } else if (r2) {
+            eventScore = r2.total;
+          } else {
+            eventScore = 0;
+          }
+        } else {
+          const sum = eventScores.reduce((acc, s) => acc + s.total, 0);
+          eventScore =
+            event.participantsRequired === 2 ? sum / eventScores.length : sum;
+        }
         total += eventScore;
       }
     });
@@ -120,17 +135,27 @@ export function DetailedScorecard({
                 {sortedFaculties.map((faculty) => {
                   const facultyScores =
                     scoresByEventFaculty.get(event.id)?.get(faculty.id) || [];
+                  const sortedScores =
+                    event.name === 'Skipping'
+                      ? [...facultyScores].sort(
+                          (a, b) => a.roundNumber - b.roundNumber
+                        )
+                      : facultyScores;
                   const emptySlots =
-                    maxParticipantsPerFaculty - facultyScores.length;
+                    maxParticipantsPerFaculty - sortedScores.length;
 
                   return (
                     <Fragment key={faculty.id}>
-                      {facultyScores.length > 0 ? (
+                      {sortedScores.length > 0 ? (
                         <>
-                          {facultyScores.map((score, idx) => {
+                          {sortedScores.map((score, idx) => {
                             const participant = participants.find(
                               (p) => p.id === score.participantId
                             );
+                            const roundLabel =
+                              event.name === 'Skipping'
+                                ? ` R${score.roundNumber}`
+                                : '';
                             return (
                               <th
                                 key={score.id || idx}
@@ -142,6 +167,7 @@ export function DetailedScorecard({
                               >
                                 <div className="font-semibold">
                                   {faculty.name}
+                                  {roundLabel}
                                 </div>
                                 <div className="font-normal mt-1">
                                   {participant?.alias ||
@@ -257,12 +283,18 @@ export function DetailedScorecard({
                             scoresByEventFaculty
                               .get(event.id)
                               ?.get(faculty.id) || [];
+                          const sortedScores =
+                            event.name === 'Skipping'
+                              ? [...facultyScores].sort(
+                                  (a, b) => a.roundNumber - b.roundNumber
+                                )
+                              : facultyScores;
                           const emptySlots =
-                            maxParticipantsPerFaculty - facultyScores.length;
+                            maxParticipantsPerFaculty - sortedScores.length;
 
                           return (
                             <Fragment key={faculty.id}>
-                              {facultyScores.map((score, idx) => {
+                              {sortedScores.map((score, idx) => {
                                 const criteriaScore = score.criteriaScores.find(
                                   (c) => c.criteriaId === criteria.criteriaId
                                 );
@@ -315,12 +347,18 @@ export function DetailedScorecard({
                 {sortedFaculties.map((faculty) => {
                   const facultyScores =
                     scoresByEventFaculty.get(event.id)?.get(faculty.id) || [];
+                  const sortedScores =
+                    event.name === 'Skipping'
+                      ? [...facultyScores].sort(
+                          (a, b) => a.roundNumber - b.roundNumber
+                        )
+                      : facultyScores;
                   const emptySlots =
-                    maxParticipantsPerFaculty - facultyScores.length;
+                    maxParticipantsPerFaculty - sortedScores.length;
 
                   return (
                     <Fragment key={faculty.id}>
-                      {facultyScores.map((score, idx) => (
+                      {sortedScores.map((score, idx) => (
                         <td
                           key={score.id || idx}
                           className="border border-gray-600 px-3 py-2 text-center text-white"
@@ -345,6 +383,42 @@ export function DetailedScorecard({
                   );
                 })}
               </tr>
+
+              {/* Skipping Average Row */}
+              {event.name === 'Skipping' && (
+                <tr className="bg-yellow-500 font-bold">
+                  <td
+                    className="border border-gray-600 px-4 py-2 text-black"
+                    style={{
+                      width: '250px',
+                      minWidth: '250px',
+                      maxWidth: '250px',
+                    }}
+                  >
+                    AVERAGE (R1+R2)/2
+                  </td>
+                  {sortedFaculties.map((faculty) => {
+                    const facultyScores =
+                      scoresByEventFaculty.get(event.id)?.get(faculty.id) || [];
+                    const r1 = facultyScores.find((s) => s.roundNumber === 1);
+                    const r2 = facultyScores.find((s) => s.roundNumber === 2);
+                    let avgDisplay = '—';
+                    if (r1 && r2) {
+                      avgDisplay = ((r1.total + r2.total) / 2).toFixed(1);
+                    }
+                    return (
+                      <td
+                        key={faculty.id}
+                        colSpan={maxParticipantsPerFaculty}
+                        className="border border-gray-600 px-3 py-2 text-center text-black"
+                        style={{ backgroundColor: '#fbbf24' }}
+                      >
+                        {avgDisplay}
+                      </td>
+                    );
+                  })}
+                </tr>
+              )}
 
               {/* Average Row (for 2-participant events) */}
               {event.participantsRequired === 2 && (

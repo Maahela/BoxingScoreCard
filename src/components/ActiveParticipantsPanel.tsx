@@ -19,6 +19,8 @@ export function ActiveParticipantsPanel({
   const [punchingBag, setPunchingBag] = useState<string>('');
   const [combatParticipant1, setCombatParticipant1] = useState<string>('');
   const [combatParticipant2, setCombatParticipant2] = useState<string>('');
+  const [activeSkippingRound, setActiveSkippingRound] = useState<1 | 2>(1);
+  const [activePhase, setActivePhase] = useState<1 | 2>(1);
   const [saving, setSaving] = useState(false);
 
   // Find event IDs
@@ -49,10 +51,32 @@ export function ActiveParticipantsPanel({
       setPunchingBag(activeParticipants.punchingBag || '');
       setCombatParticipant1(activeParticipants.combat.participant1 || '');
       setCombatParticipant2(activeParticipants.combat.participant2 || '');
+      setActiveSkippingRound(activeParticipants.activeSkippingRound || 1);
+      setActivePhase(activeParticipants.activePhase || 1);
     }
   }, [activeParticipants]);
 
   const handleSave = async () => {
+    // Validate combat participants - both must be selected or both must be empty
+    const hasCombatP1 = combatParticipant1 && combatParticipant1.trim() !== '';
+    const hasCombatP2 = combatParticipant2 && combatParticipant2.trim() !== '';
+
+    if (hasCombatP1 !== hasCombatP2) {
+      alert(
+        'Combat Error: You must select BOTH participants for Boxing Combat, or leave both empty. ' +
+          'Combat requires two participants to score simultaneously.'
+      );
+      return;
+    }
+
+    // Warn if Phase 2 (Combat) is activated with participants selected
+    if (activePhase === 2 && (hasCombatP1 || hasCombatP2)) {
+      const confirmed = window.confirm(
+        'You are activating Phase 2 (Boxing Combat). This will make Combat events accessible to invigilators. Continue?'
+      );
+      if (!confirmed) return;
+    }
+
     setSaving(true);
     try {
       await setActiveParticipants({
@@ -63,6 +87,8 @@ export function ActiveParticipantsPanel({
           participant1: combatParticipant1 || null,
           participant2: combatParticipant2 || null,
         },
+        activeSkippingRound: activeSkippingRound,
+        activePhase: activePhase,
       });
       alert('Active participants updated successfully!');
     } catch (error) {
@@ -89,9 +115,58 @@ export function ActiveParticipantsPanel({
         automatically see these selections.
       </p>
 
+      {/* Phase Selector */}
+      <div className="mb-6 p-6 bg-purple-50 border-2 border-purple-500 rounded-lg">
+        <label className="block text-sm font-bold text-gray-900 mb-3">
+          🎯 Active Tournament Phase
+        </label>
+        <div className="inline-flex rounded-lg bg-white border-2 border-gray-300 p-1">
+          <button
+            type="button"
+            onClick={() => setActivePhase(1)}
+            className={`px-8 py-4 rounded-md font-bold transition-colors ${
+              activePhase === 1
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            Phase 1<br />
+            <span className="text-xs font-normal">Shadow/Bag/Skip</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActivePhase(2)}
+            className={`px-8 py-4 rounded-md font-bold transition-colors ${
+              activePhase === 2
+                ? 'bg-red-600 text-white shadow-md'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            Phase 2<br />
+            <span className="text-xs font-normal">Combat</span>
+          </button>
+        </div>
+        <div className="mt-3 text-sm font-medium">
+          {activePhase === 1 ? (
+            <div className="text-blue-800">
+              ✓ Phase 1 Active: Invigilators can access Shadow Boxing, Punching
+              Bag, and Skipping
+            </div>
+          ) : (
+            <div className="text-red-800">
+              ✓ Phase 2 Active: Invigilators can ONLY access Boxing Combat
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="space-y-6">
         {/* Phase 1 Section */}
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+        <div
+          className={`bg-blue-50 border-2 rounded-lg p-6 ${
+            activePhase === 1 ? 'border-blue-500' : 'border-gray-300 opacity-60'
+          }`}
+        >
           <h3 className="text-xl font-bold mb-4 text-blue-900">
             Phase 1 Events
           </h3>
@@ -118,6 +193,43 @@ export function ActiveParticipantsPanel({
                 ✓ Currently active: {getParticipantName(skipping)}
               </div>
             )}
+          </div>
+
+          {/* Active Skipping Round Selector */}
+          <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+            <label className="block text-sm font-bold text-gray-900 mb-3">
+              Active Skipping Round (Invigilators will ONLY see this round)
+            </label>
+            <div className="inline-flex rounded-lg bg-white border-2 border-gray-300 p-1">
+              <button
+                type="button"
+                onClick={() => setActiveSkippingRound(1)}
+                className={`px-6 py-3 rounded-md font-bold transition-colors ${
+                  activeSkippingRound === 1
+                    ? 'bg-green-600 text-white shadow-md'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Round 1
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSkippingRound(2)}
+                className={`px-6 py-3 rounded-md font-bold transition-colors ${
+                  activeSkippingRound === 2
+                    ? 'bg-green-600 text-white shadow-md'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Round 2
+              </button>
+            </div>
+            <div className="mt-3 text-sm text-yellow-800 font-medium">
+              ⚠️ Current active round:{' '}
+              <span className="font-bold">Round {activeSkippingRound}</span>
+              <br />
+              Invigilators will only see scoring for this round.
+            </div>
           </div>
 
           {/* Shadow Boxing */}
@@ -170,7 +282,11 @@ export function ActiveParticipantsPanel({
         </div>
 
         {/* Phase 2 Section */}
-        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
+        <div
+          className={`bg-green-50 border-2 rounded-lg p-6 ${
+            activePhase === 2 ? 'border-red-500' : 'border-gray-300 opacity-60'
+          }`}
+        >
           <h3 className="text-xl font-bold mb-4 text-green-900">
             Phase 2 Event
           </h3>

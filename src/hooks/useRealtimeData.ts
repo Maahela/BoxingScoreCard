@@ -9,6 +9,7 @@ import type {
   FacultyTotals,
 } from '@/types';
 import { where, orderBy } from 'firebase/firestore';
+import type { Assignment } from '@/types';
 
 // Hook for realtime scores by event
 export function useRealtimeScores(eventId?: string) {
@@ -99,6 +100,37 @@ export function useRealtimeEvents() {
   return { events, loading };
 }
 
+// Hook for current assignment (to know which round is active)
+export function useCurrentAssignment() {
+  const [currentAssignment, setCurrentAssignment] = useState<Assignment | null>(
+    null
+  );
+
+  useEffect(() => {
+    const unsubscribe = subscribeToCollection<Assignment>(
+      'assignments',
+      (data) => {
+        // Look for first assignment with status pending or in-progress and highest roundNumber
+        const candidates = data.filter((a) =>
+          ['pending', 'in-progress'].includes((a as any).status)
+        );
+        if (candidates.length === 0) {
+          setCurrentAssignment(null);
+          return;
+        }
+        const sorted = candidates.sort(
+          (a, b) => (b as any).roundNumber - (a as any).roundNumber
+        );
+        setCurrentAssignment(sorted[0] as Assignment);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  return { currentAssignment };
+}
+
 // Hook for realtime templates
 export function useRealtimeTemplates() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -121,6 +153,7 @@ export function useRealtimeFacultyTotals() {
   const { faculties } = useRealtimeFaculties();
   const { events } = useRealtimeEvents();
   const { scores } = useRealtimeScores();
+  const { currentAssignment } = useCurrentAssignment();
   const [totals, setTotals] = useState<FacultyTotals[]>([]);
 
   useEffect(() => {
@@ -162,6 +195,58 @@ export function useRealtimeFacultyTotals() {
       eventScores.forEach((eventScoresList, eventId) => {
         const event = events.find((e) => e.id === eventId);
         if (!event) return;
+
+        // Special handling for Skipping (Phase 1 two rounds)
+        if (event.name === 'Skipping') {
+          // group scores by round
+          const r1 = eventScoresList.find((s) => s.roundNumber === 1);
+          const r2 = eventScoresList.find((s) => s.roundNumber === 2);
+
+          let eventScore = 0;
+          let avgInfo = { total: 0, count: 0, average: 0 };
+
+          // If both rounds exist, compute final skipping average
+          if (r1 && r2) {
+            const final = ((r1.total || 0) + (r2.total || 0)) / 2;
+            eventScore = final;
+            avgInfo = {
+              total: (r1.total || 0) + (r2.total || 0),
+              count: 2,
+              average: final,
+            };
+          } else {
+            // Only one round present: show appropriate round depending on current assignment round
+            const currentRound = currentAssignment?.roundNumber || 1;
+            if (currentRound === 1 && r1) {
+              eventScore = r1.total || 0;
+              avgInfo = {
+                total: r1.total || 0,
+                count: 1,
+                average: r1.total || 0,
+              };
+            } else if (currentRound === 2 && r2) {
+              eventScore = r2.total || 0;
+              avgInfo = {
+                total: r2.total || 0,
+                count: 1,
+                average: r2.total || 0,
+              };
+            } else {
+              eventScore = 0;
+              avgInfo = { total: 0, count: 0, average: 0 };
+            }
+          }
+
+          facultyTotal.eventTotals[eventId] = eventScore;
+          facultyTotal.eventAverages[eventId] = avgInfo;
+
+          if (event.phase === 1) {
+            facultyTotal.phase1Total += eventScore;
+          } else if (event.phase === 2) {
+            facultyTotal.phase2Total += eventScore;
+          }
+          return;
+        }
 
         // Calculate sum and count for this event
         const sum = eventScoresList.reduce((acc, s) => acc + s.total, 0);

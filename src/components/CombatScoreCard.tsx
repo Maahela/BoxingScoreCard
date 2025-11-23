@@ -120,7 +120,7 @@ export function CombatScoreCard({
       </div>
 
       {/* Criteria Rows */}
-      <div className="space-y-4">
+      <div className="space-y-2 sm:space-y-3 md:space-y-4">
         {criteria.map((criterion) => {
           const score1 =
             scores1.find((s) => s.criteriaId === criterion.id)?.score || 0;
@@ -130,18 +130,28 @@ export function CombatScoreCard({
           return (
             <div
               key={criterion.id}
-              className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center py-4 px-4 bg-black/20 rounded-lg border border-white/10 backdrop-blur-sm"
+              className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3 md:gap-4 items-center py-3 sm:py-4 px-2 sm:px-3 md:px-4 bg-black/20 rounded-lg border border-white/10 backdrop-blur-sm"
             >
+              {/* Criterion Label - Mobile First */}
+              <div className="text-center w-full sm:hidden">
+                <div className="criteria-label text-sm font-semibold">
+                  {criterion.label}
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  Max: {criterion.maxPoints}
+                </div>
+              </div>
+
               {/* Fighter A Controls */}
-              <div className="flex justify-end items-center gap-3">
-                <div className="text-2xl md:text-3xl font-bold text-red-400 min-w-[3rem] text-center">
+              <div className="flex justify-center sm:justify-end items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-red-400 min-w-[2.5rem] sm:min-w-[3rem] text-center">
                   {score1}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1.5 sm:gap-2">
                   <button
                     onClick={() => handleDecrement(criterion.id, score1, true)}
                     disabled={disabled || score1 === 0}
-                    className="score-control w-12 h-12 font-bold rounded-lg text-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="score-control w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 font-bold rounded-lg text-lg sm:text-xl disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-transform"
                   >
                     −
                   </button>
@@ -155,30 +165,30 @@ export function CombatScoreCard({
                       )
                     }
                     disabled={disabled || score1 >= criterion.maxPoints}
-                    className="score-control w-12 h-12 font-bold rounded-lg text-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="score-control w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 font-bold rounded-lg text-lg sm:text-xl disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-transform"
                   >
                     +
                   </button>
                 </div>
               </div>
 
-              {/* Criterion Label */}
-              <div className="text-center min-w-[180px] md:min-w-[220px]">
-                <div className="criteria-label text-base md:text-lg">
+              {/* Criterion Label - Desktop */}
+              <div className="text-center min-w-[140px] sm:min-w-[160px] md:min-w-[220px] hidden sm:block">
+                <div className="criteria-label text-sm md:text-base lg:text-lg">
                   {criterion.label}
                 </div>
-                <div className="text-sm text-gray-400 mt-1">
+                <div className="text-xs sm:text-sm text-gray-400 mt-1">
                   Max: {criterion.maxPoints}
                 </div>
               </div>
 
               {/* Fighter B Controls */}
-              <div className="flex justify-start items-center gap-3">
-                <div className="flex gap-2">
+              <div className="flex justify-center sm:justify-start items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                <div className="flex gap-1.5 sm:gap-2">
                   <button
                     onClick={() => handleDecrement(criterion.id, score2, false)}
                     disabled={disabled || score2 === 0}
-                    className="score-control w-12 h-12 font-bold rounded-lg text-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="score-control w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 font-bold rounded-lg text-lg sm:text-xl disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-transform"
                   >
                     −
                   </button>
@@ -192,12 +202,12 @@ export function CombatScoreCard({
                       )
                     }
                     disabled={disabled || score2 >= criterion.maxPoints}
-                    className="score-control w-12 h-12 font-bold rounded-lg text-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="score-control w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 font-bold rounded-lg text-lg sm:text-xl disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-transform"
                   >
                     +
                   </button>
                 </div>
-                <div className="text-2xl md:text-3xl font-bold text-blue-400 min-w-[3rem] text-center">
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-400 min-w-[2.5rem] sm:min-w-[3rem] text-center">
                   {score2}
                 </div>
               </div>
@@ -207,20 +217,20 @@ export function CombatScoreCard({
       </div>
 
       {/* Current Scores Footer */}
-      <div className="grid grid-cols-2 gap-6 mt-8">
-        <div className="p-6 bg-gradient-to-br from-red-900/30 to-red-800/20 border border-red-500/40 rounded-xl text-center backdrop-blur-sm">
-          <div className="text-sm text-gray-300 mb-2 tracking-wider uppercase">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6 mt-4 sm:mt-6 md:mt-8">
+        <div className="p-3 sm:p-4 md:p-6 bg-gradient-to-br from-red-900/30 to-red-800/20 border border-red-500/40 rounded-lg md:rounded-xl text-center backdrop-blur-sm">
+          <div className="text-xs sm:text-sm text-gray-300 mb-1 sm:mb-2 tracking-wider uppercase">
             Current Score
           </div>
-          <div className="text-5xl font-bold text-white boxing-title">
+          <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-white boxing-title">
             {total1}
           </div>
         </div>
-        <div className="p-6 bg-gradient-to-br from-blue-900/30 to-blue-800/20 border border-blue-500/40 rounded-xl text-center backdrop-blur-sm">
-          <div className="text-sm text-gray-300 mb-2 tracking-wider uppercase">
+        <div className="p-3 sm:p-4 md:p-6 bg-gradient-to-br from-blue-900/30 to-blue-800/20 border border-blue-500/40 rounded-lg md:rounded-xl text-center backdrop-blur-sm">
+          <div className="text-xs sm:text-sm text-gray-300 mb-1 sm:mb-2 tracking-wider uppercase">
             Current Score
           </div>
-          <div className="text-5xl font-bold text-white boxing-title">
+          <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-white boxing-title">
             {total2}
           </div>
         </div>

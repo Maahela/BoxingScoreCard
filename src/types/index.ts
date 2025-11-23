@@ -85,6 +85,10 @@ export interface Score {
   total: number;
   timestamp: number;
   locked?: boolean;
+  // Skipping-specific optional fields (Phase 1 two-round skipping)
+  skippingRound1Score?: number;
+  skippingRound2Score?: number;
+  skippingFinalScore?: number;
 }
 
 export interface FacultyTotals {
@@ -123,4 +127,6 @@ export interface ActiveParticipants {
     participant1: string | null;
     participant2: string | null;
   };
+  activeSkippingRound?: 1 | 2; // Admin-controlled: which skipping round is currently active
+  activePhase?: 1 | 2; // Admin-controlled: which phase is currently active (Phase 1: Shadow/Bag/Skip, Phase 2: Combat)
 }

@@ -1282,7 +1282,127 @@ async function seedData() {
     }
     console.log(`✓ Created ${dummyScores.length} dummy scores`);
 
-    // 8. Create Active Participants document
+    // 8. Add Skipping Round 2 scores (for testing two-round skipping display)
+    console.log('Creating Skipping Round 2 scores...');
+    const skippingRound2Scores = [
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[0], // UCSC - Thunder
+        facultyId: facultyIds['UCSC'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 16 },
+          { criteriaId: 'balance', score: 8 },
+          { criteriaId: 'endurance', score: 18 },
+          { criteriaId: 'speed', score: 8 },
+          { criteriaId: 'continuity', score: 25 },
+          { criteriaId: 'skill_variation', score: 8 },
+        ],
+        total: 83,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[4], // Technology - Rocket
+        facultyId: facultyIds['Technology'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 18 },
+          { criteriaId: 'balance', score: 9 },
+          { criteriaId: 'endurance', score: 19 },
+          { criteriaId: 'speed', score: 9 },
+          { criteriaId: 'continuity', score: 28 },
+          { criteriaId: 'skill_variation', score: 9 },
+        ],
+        total: 92,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[2], // Management - The Bull
+        facultyId: facultyIds['Management'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 17 },
+          { criteriaId: 'balance', score: 9 },
+          { criteriaId: 'endurance', score: 19 },
+          { criteriaId: 'speed', score: 9 },
+          { criteriaId: 'continuity', score: 27 },
+          { criteriaId: 'skill_variation', score: 9 },
+        ],
+        total: 90,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[6], // Science - Titan
+        facultyId: facultyIds['Science'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 19 },
+          { criteriaId: 'balance', score: 10 },
+          { criteriaId: 'endurance', score: 20 },
+          { criteriaId: 'speed', score: 10 },
+          { criteriaId: 'continuity', score: 29 },
+          { criteriaId: 'skill_variation', score: 10 },
+        ],
+        total: 98,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[8], // Nursing - Hawk
+        facultyId: facultyIds['Nursing'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 18 },
+          { criteriaId: 'balance', score: 9 },
+          { criteriaId: 'endurance', score: 18 },
+          { criteriaId: 'speed', score: 9 },
+          { criteriaId: 'continuity', score: 27 },
+          { criteriaId: 'skill_variation', score: 9 },
+        ],
+        total: 90,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[10], // Medicine - Apex
+        facultyId: facultyIds['Medicine'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 20 },
+          { criteriaId: 'balance', score: 10 },
+          { criteriaId: 'endurance', score: 20 },
+          { criteriaId: 'speed', score: 10 },
+          { criteriaId: 'continuity', score: 30 },
+          { criteriaId: 'skill_variation', score: 10 },
+        ],
+        total: 100,
+        timestamp: Date.now(),
+      },
+    ];
+
+    for (const score of skippingRound2Scores) {
+      await addDoc(collection(db, 'scores'), score);
+    }
+    console.log(
+      `✓ Created ${skippingRound2Scores.length} Skipping Round 2 scores`
+    );
+
+    // 9. Create Active Participants document
     console.log('Creating active participants document...');
     await setDoc(doc(db, 'activeParticipants', 'current'), {
       skipping: participantIds[0], // UCSC - Thunder
@@ -1292,6 +1412,8 @@ async function seedData() {
         participant1: participantIds[0], // UCSC - Thunder
         participant2: participantIds[1], // UCSC - Lightning
       },
+      activeSkippingRound: 1,
+      activePhase: 1,
     });
     console.log('✓ Created active participants document');
 
