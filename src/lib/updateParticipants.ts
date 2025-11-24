@@ -23,7 +23,9 @@ const firebaseConfig = {
 };
 
 if (!firebaseConfig.projectId) {
-  console.error('❌ Error: Firebase configuration is missing! Ensure VITE_FIREBASE_* env vars are set.');
+  console.error(
+    '❌ Error: Firebase configuration is missing! Ensure VITE_FIREBASE_* env vars are set.'
+  );
   process.exit(1);
 }
 
@@ -54,7 +56,9 @@ async function loadAllEventIds(): Promise<string[]> {
 
 async function clearParticipants() {
   const snapshot = await getDocs(collection(db, 'participants'));
-  const deletes = snapshot.docs.map((d) => deleteDoc(doc(db, 'participants', d.id)));
+  const deletes = snapshot.docs.map((d) =>
+    deleteDoc(doc(db, 'participants', d.id))
+  );
   await Promise.all(deletes);
   return snapshot.size;
 }
@@ -65,7 +69,9 @@ function validateDataset(dataset: NewParticipant[]) {
   }
   for (const [i, p] of dataset.entries()) {
     if (!p.name || !p.faculty) {
-      throw new Error(`Dataset entry at index ${i} is missing required fields (name, faculty).`);
+      throw new Error(
+        `Dataset entry at index ${i} is missing required fields (name, faculty).`
+      );
     }
   }
 }
@@ -89,7 +95,9 @@ async function run() {
     const facultyKey = p.faculty.trim().toLowerCase();
     const facultyId = facultyMap[facultyKey];
     if (!facultyId) {
-      throw new Error(`Faculty not found in Firestore for participant "${p.name}": "${p.faculty}"`);
+      throw new Error(
+        `Faculty not found in Firestore for participant "${p.name}": "${p.faculty}"`
+      );
     }
 
     const participantDoc = {
@@ -104,7 +112,9 @@ async function run() {
   }
 
   console.log(`✅ Inserted ${created} participant(s).`);
-  console.log('\nNote: Active participants may reference old IDs. Use the Admin panel to set new active participants after this update.');
+  console.log(
+    '\nNote: Active participants may reference old IDs. Use the Admin panel to set new active participants after this update.'
+  );
 }
 
 run()

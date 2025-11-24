@@ -103,16 +103,21 @@ export function InvigilatorDashboard() {
 
   // Check if current participants have already been scored
   useEffect(() => {
-    console.log('[InvigilatorDashboard] useEffect triggered - checking scores', {
-      hasSelectedEvent: !!selectedEvent,
-      hasSelectedParticipant: !!selectedParticipant,
-      hasCombatParticipant2: !!combatParticipant2,
-      hasInvigilatorId: !!auth.invigilatorId,
-    });
+    console.log(
+      '[InvigilatorDashboard] useEffect triggered - checking scores',
+      {
+        hasSelectedEvent: !!selectedEvent,
+        hasSelectedParticipant: !!selectedParticipant,
+        hasCombatParticipant2: !!combatParticipant2,
+        hasInvigilatorId: !!auth.invigilatorId,
+      }
+    );
 
     const checkScores = async () => {
       if (!selectedEvent || !selectedParticipant || !auth.invigilatorId) {
-        console.log('[InvigilatorDashboard] Skipping check - missing required data');
+        console.log(
+          '[InvigilatorDashboard] Skipping check - missing required data'
+        );
         setAlreadyScored(false);
         return;
       }
@@ -141,8 +146,11 @@ export function InvigilatorDashboard() {
         facultyId,
         activeSkippingRound
       );
-      
-      console.log('[InvigilatorDashboard] Already scored check result:', hasScore);
+
+      console.log(
+        '[InvigilatorDashboard] Already scored check result:',
+        hasScore
+      );
       setAlreadyScored(hasScore);
     };
 

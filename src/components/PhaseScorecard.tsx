@@ -76,7 +76,9 @@ export function PhaseScorecard({
         const facultyScores = eventScoresMap.get(faculty.id);
         if (!facultyScores || facultyScores.length === 0) return;
 
-        console.log(`[PhaseScorecard] Faculty ${faculty.name} has ${facultyScores.length} combat scores`);
+        console.log(
+          `[PhaseScorecard] Faculty ${faculty.name} has ${facultyScores.length} combat scores`
+        );
 
         // Group scores by participantId
         const scoresByParticipant = new Map<string, Score[]>();
@@ -87,7 +89,9 @@ export function PhaseScorecard({
           scoresByParticipant.get(score.participantId)!.push(score);
         });
 
-        console.log(`[PhaseScorecard] Grouped into ${scoresByParticipant.size} participants`);
+        console.log(
+          `[PhaseScorecard] Grouped into ${scoresByParticipant.size} participants`
+        );
 
         // Create averaged scores handling ANY number of judge entries (multiple bouts)
         const averagedScores: Score[] = [];
@@ -105,7 +109,7 @@ export function PhaseScorecard({
             scoresByJudge.get(s.invigilatorId)!.push(s);
           });
 
-            // Get latest score per judge
+          // Get latest score per judge
           const latestScores = Array.from(scoresByJudge.values())
             .map((arr) => arr.sort((a, b) => b.timestamp - a.timestamp)[0])
             .filter(Boolean);
@@ -140,7 +144,9 @@ export function PhaseScorecard({
           }
         });
 
-        console.log(`[PhaseScorecard] Final averaged scores count: ${averagedScores.length}`);
+        console.log(
+          `[PhaseScorecard] Final averaged scores count: ${averagedScores.length}`
+        );
         // Replace faculty scores with averaged scores
         eventScoresMap.set(faculty.id, averagedScores);
       });
@@ -409,7 +415,9 @@ export function PhaseScorecard({
                                     className="border border-gray-600 px-3 py-2 text-center font-semibold"
                                     style={{ backgroundColor: '#1f2937' }}
                                   >
-                                    {typeof criteriaScore?.score === 'number' ? criteriaScore.score.toFixed(2) : '0.00'}
+                                    {typeof criteriaScore?.score === 'number'
+                                      ? criteriaScore.score.toFixed(2)
+                                      : '0.00'}
                                   </td>
                                 );
                               })}

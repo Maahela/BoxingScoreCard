@@ -63,7 +63,9 @@ export function DetailedScorecard({
         const facultyScores = eventScoresMap.get(faculty.id);
         if (!facultyScores || facultyScores.length === 0) return;
 
-        console.log(`[DetailedScorecard] Faculty ${faculty.name} has ${facultyScores.length} combat scores`);
+        console.log(
+          `[DetailedScorecard] Faculty ${faculty.name} has ${facultyScores.length} combat scores`
+        );
 
         // Group scores by participantId
         const scoresByParticipant = new Map<string, Score[]>();
@@ -74,7 +76,9 @@ export function DetailedScorecard({
           scoresByParticipant.get(score.participantId)!.push(score);
         });
 
-        console.log(`[DetailedScorecard] Grouped into ${scoresByParticipant.size} participants`);
+        console.log(
+          `[DetailedScorecard] Grouped into ${scoresByParticipant.size} participants`
+        );
 
         // Create averaged scores handling ANY number of judge entries (multiple bouts)
         const averagedScores: Score[] = [];
@@ -124,7 +128,9 @@ export function DetailedScorecard({
           }
         });
 
-        console.log(`[DetailedScorecard] Final averaged scores count: ${averagedScores.length}`);
+        console.log(
+          `[DetailedScorecard] Final averaged scores count: ${averagedScores.length}`
+        );
         // Replace faculty scores with averaged scores
         eventScoresMap.set(faculty.id, averagedScores);
       });
@@ -386,7 +392,9 @@ export function DetailedScorecard({
                                     className="border border-gray-600 px-3 py-2 text-center font-semibold"
                                     style={{ backgroundColor: '#1f2937' }}
                                   >
-                                    {typeof criteriaScore?.score === 'number' ? criteriaScore.score.toFixed(2) : '0.00'}
+                                    {typeof criteriaScore?.score === 'number'
+                                      ? criteriaScore.score.toFixed(2)
+                                      : '0.00'}
                                   </td>
                                 );
                               })}

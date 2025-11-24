@@ -1305,7 +1305,10 @@ async function seedData() {
           score: Math.max(0, c.score + (Math.random() > 0.5 ? 1 : -1)),
         })),
         total:
-          score.total + (Math.random() > 0.5 ? Math.floor(Math.random() * 3) : -Math.floor(Math.random() * 3)),
+          score.total +
+          (Math.random() > 0.5
+            ? Math.floor(Math.random() * 3)
+            : -Math.floor(Math.random() * 3)),
       }));
 
     for (const score of judge5CombatScores) {

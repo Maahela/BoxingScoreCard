@@ -23,6 +23,7 @@ Both judges have access to the Boxing Combat event when Phase 2 is active.
 ### Score Calculation
 
 For each criterion:
+
 ```
 averageScore = (judge1Score + judge2Score) / 2
 ```
@@ -55,6 +56,7 @@ The averaging happens in the display components (`PhaseScorecard.tsx` and `Detai
 ### Already Scored Check
 
 Each judge's "Already Scored" status is tracked independently:
+
 - Judge 1 can only score once per bout
 - Judge 2 can only score once per bout
 - Both judges must score for complete results
@@ -64,6 +66,7 @@ Each judge's "Already Scored" status is tracked independently:
 ### Dummy Data
 
 The seed script (`npm run seed`) automatically creates scores from both judges for testing:
+
 - Judge 1 scores all combat bouts
 - Judge 2 scores the same bouts with slightly varied scores (±1-3 points)
 - Display shows averaged results
