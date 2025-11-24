@@ -177,19 +177,19 @@ export function DisplayScreen() {
                           <div className="text-right">
                             <div className="text-sm text-gray-400">Phase 1</div>
                             <div className="text-2xl font-semibold text-blue-300">
-                              {total.phase1Total.toFixed(1)}
+                              {total.phase1Total.toFixed(2)}
                             </div>
                           </div>
                           <div className="text-right">
                             <div className="text-sm text-gray-400">Phase 2</div>
-                            <div className="text-2xl font-semibold text-green-300">
-                              {total.phase2Total.toFixed(1)}
+                            <div className="text-2xl font-semibold text-red-300">
+                              {total.phase2Total.toFixed(2)}
                             </div>
                           </div>
                           <div className="text-right border-l border-gray-600 pl-8">
                             <div className="text-sm text-gray-400">Total</div>
-                            <div className="text-5xl font-bold text-yellow-400">
-                              {total.totalScore.toFixed(1)}
+                            <div className="text-4xl font-bold text-green-400">
+                              {total.totalScore.toFixed(2)}
                             </div>
                           </div>
                         </div>
@@ -255,7 +255,7 @@ export function DisplayScreen() {
                         )}
                       </div>
                       <div className="text-2xl font-bold text-blue-400">
-                        {score.total.toFixed(1)}
+                        {score.total.toFixed(2)}
                       </div>
                     </div>
                   );

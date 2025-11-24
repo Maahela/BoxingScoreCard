@@ -187,6 +187,54 @@ export function useRealtimeFacultyTotals() {
       facultyScores.get(score.eventId)!.push(score);
     });
 
+    // Apply combat two-judge averaging before calculating totals
+    events.forEach((event) => {
+      if (event.name === 'Boxing Combat') {
+        scoresByFacultyEvent.forEach((eventScores) => {
+          const combatScores = eventScores.get(event.id);
+          if (!combatScores || combatScores.length === 0) return;
+
+          // Group by participant and judge
+          const scoresByParticipant = new Map<string, Score[]>();
+          combatScores.forEach((score) => {
+            if (!scoresByParticipant.has(score.participantId)) {
+              scoresByParticipant.set(score.participantId, []);
+            }
+            scoresByParticipant.get(score.participantId)!.push(score);
+          });
+
+          // Average scores from two judges per participant
+          const averagedScores: Score[] = [];
+          scoresByParticipant.forEach((participantScores) => {
+            const scoresByJudge = new Map<string, Score[]>();
+            participantScores.forEach((s) => {
+              if (!scoresByJudge.has(s.invigilatorId)) {
+                scoresByJudge.set(s.invigilatorId, []);
+              }
+              scoresByJudge.get(s.invigilatorId)!.push(s);
+            });
+
+            const latestScores = Array.from(scoresByJudge.values())
+              .map((arr) => arr.sort((a, b) => b.timestamp - a.timestamp)[0])
+              .filter(Boolean);
+
+            if (latestScores.length >= 2) {
+              const [score1, score2] = latestScores.slice(0, 2);
+              averagedScores.push({
+                ...score1,
+                total: (score1.total + score2.total) / 2,
+                invigilatorId: 'averaged',
+              });
+            } else if (latestScores.length === 1) {
+              averagedScores.push(latestScores[0]);
+            }
+          });
+
+          eventScores.set(event.id, averagedScores);
+        });
+      }
+    });
+
     // Calculate totals for each faculty
     scoresByFacultyEvent.forEach((eventScores, facultyId) => {
       const facultyTotal = totalsMap.get(facultyId);

@@ -130,13 +130,14 @@ Under **Phase 2 Event** section:
 
 #### 4. Click "Update Active Participants"
 
-#### 5. Combat Invigilator Scores
+#### 5. Combat Invigilators Score
 
-The Combat judge will:
+BOTH Combat judges will:
 
 - See BOTH participants on their screen
 - Score both simultaneously using the split-screen interface
 - Submit scores for both fighters at once
+- System automatically averages the two judges' scores for display
 
 #### 6. Select Next Combat Bout
 
@@ -232,11 +233,18 @@ Share these login details with judges:
 - Will see only Skipping event when Phase 1 is active
 - Will see Round indicator (R1 or R2) that you control
 
-**Combat Judge:**
+**Combat Judge 1:**
 
 - PIN: `444444`
 - Will see ONLY Combat event when Phase 2 is active
 - Scores both fighters simultaneously
+
+**Combat Judge 2:**
+
+- PIN: `555555`
+- Will see ONLY Combat event when Phase 2 is active
+- Scores both fighters simultaneously
+- System averages both judges' scores automatically
 
 ### Invigilator Workflow
 
@@ -416,7 +424,8 @@ Share these login details with judges:
 - [ ] Confirm popup
 - [ ] Select first combat pair (Participant 1 + 2)
 - [ ] Click "Update Active Participants"
-- [ ] Inform Combat judge to begin
+- [ ] Inform BOTH Combat judges to begin scoring
+- [ ] Both judges score simultaneously - system averages automatically
 
 **After Event:**
 
@@ -447,7 +456,8 @@ Share these login details with judges:
 | Shadow Boxing Judge | 111111 | Score Shadow Boxing only |
 | Punching Bag Judge  | 222222 | Score Punching Bag only  |
 | Skipping Judge      | 333333 | Score Skipping only      |
-| Combat Judge        | 444444 | Score Combat only        |
+| Combat Judge 1      | 444444 | Score Combat only        |
+| Combat Judge 2      | 555555 | Score Combat only        |
 | Display Screen      | 999999 | View-only scoreboard     |
 
 **Website:** https://boxing-scorecard-new-1a819.web.app

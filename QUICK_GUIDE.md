@@ -10,7 +10,8 @@
 | **Shadow Boxing Judge** | 111111   |
 | **Punching Bag Judge**  | 222222   |
 | **Skipping Judge**      | 333333   |
-| **Combat Judge**        | 444444   |
+| **Combat Judge 1**      | 444444   |
+| **Combat Judge 2**      | 555555   |
 | **Display Screen**      | 999999   |
 
 ---
@@ -32,6 +33,7 @@
 - If you see "Already Scored" - you've already scored those participants
 - If you see "Waiting for Admin" - admin hasn't selected participants yet
 - For Combat: You'll score BOTH fighters at the same time
+- For Combat: TWO judges score simultaneously - scores are automatically averaged
 
 ---
 
@@ -52,8 +54,9 @@
 1. Click **Phase 2** button (red)
 2. Select **BOTH** Participant 1 AND Participant 2
 3. Click **Update Active Participants**
-4. Combat judge scores both fighters
-5. Repeat for each combat bout
+4. BOTH combat judges score the fighters simultaneously
+5. System averages the two judges' scores automatically
+6. Repeat for each combat bout
 
 ### Important Rules:
 

@@ -9,7 +9,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "seed": "tsx src/lib/seedData.ts",
-    "clear": "tsx src/lib/clearData.ts"
+    "clear": "tsx src/lib/clearData.ts",
+    "update:participants": "tsx src/lib/updateParticipants.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

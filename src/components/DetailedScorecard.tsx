@@ -49,6 +49,88 @@ export function DetailedScorecard({
     eventScores.get(score.facultyId)!.push(score);
   });
 
+  // Process Combat events to average scores from two judges
+  // For Boxing Combat, we need to group scores by participantId and average across judges
+  uniqueEvents.forEach((event) => {
+    if (event.name === 'Boxing Combat') {
+      const eventScoresMap = scoresByEventFaculty.get(event.id);
+      if (!eventScoresMap) return;
+
+      console.log('[DetailedScorecard] Processing Combat event for averaging');
+
+      // Process each faculty's combat scores
+      faculties.forEach((faculty) => {
+        const facultyScores = eventScoresMap.get(faculty.id);
+        if (!facultyScores || facultyScores.length === 0) return;
+
+        console.log(`[DetailedScorecard] Faculty ${faculty.name} has ${facultyScores.length} combat scores`);
+
+        // Group scores by participantId
+        const scoresByParticipant = new Map<string, Score[]>();
+        facultyScores.forEach((score) => {
+          if (!scoresByParticipant.has(score.participantId)) {
+            scoresByParticipant.set(score.participantId, []);
+          }
+          scoresByParticipant.get(score.participantId)!.push(score);
+        });
+
+        console.log(`[DetailedScorecard] Grouped into ${scoresByParticipant.size} participants`);
+
+        // Create averaged scores handling ANY number of judge entries (multiple bouts)
+        const averagedScores: Score[] = [];
+        scoresByParticipant.forEach((participantScores) => {
+          console.log(
+            `[DetailedScorecard] Participant has ${participantScores.length} total combat score entries`
+          );
+
+          // Group by judge (invigilatorId) and take latest score per judge
+          const scoresByJudge = new Map<string, Score[]>();
+          participantScores.forEach((s) => {
+            if (!scoresByJudge.has(s.invigilatorId)) {
+              scoresByJudge.set(s.invigilatorId, []);
+            }
+            scoresByJudge.get(s.invigilatorId)!.push(s);
+          });
+
+          const latestScores = Array.from(scoresByJudge.values())
+            .map((arr) => arr.sort((a, b) => b.timestamp - a.timestamp)[0])
+            .filter(Boolean);
+
+          if (latestScores.length >= 2) {
+            const [score1, score2] = latestScores.slice(0, 2);
+            console.log(
+              `[DetailedScorecard] Averaging latest judge scores totals=${score1.total},${score2.total}`
+            );
+            const averagedCriteriaScores = score1.criteriaScores.map(
+              (criteria, idx) => ({
+                criteriaId: criteria.criteriaId,
+                score: (criteria.score + score2.criteriaScores[idx].score) / 2,
+              })
+            );
+            const averagedTotal = (score1.total + score2.total) / 2;
+            averagedScores.push({
+              ...score1,
+              criteriaScores: averagedCriteriaScores,
+              total: averagedTotal,
+              invigilatorId: 'averaged',
+            });
+          } else if (latestScores.length === 1) {
+            console.log(
+              `[DetailedScorecard] Only one judge latest score total=${latestScores[0].total}`
+            );
+            averagedScores.push(latestScores[0]);
+          } else {
+            console.log('[DetailedScorecard] No valid judge scores found');
+          }
+        });
+
+        console.log(`[DetailedScorecard] Final averaged scores count: ${averagedScores.length}`);
+        // Replace faculty scores with averaged scores
+        eventScoresMap.set(faculty.id, averagedScores);
+      });
+    }
+  });
+
   // Calculate faculty totals
   const facultyTotals = new Map<string, number>();
   faculties.forEach((faculty) => {
@@ -304,7 +386,7 @@ export function DetailedScorecard({
                                     className="border border-gray-600 px-3 py-2 text-center font-semibold"
                                     style={{ backgroundColor: '#1f2937' }}
                                   >
-                                    {criteriaScore?.score || 0}
+                                    {typeof criteriaScore?.score === 'number' ? criteriaScore.score.toFixed(2) : '0.00'}
                                   </td>
                                 );
                               })}
@@ -366,7 +448,7 @@ export function DetailedScorecard({
                             backgroundColor: '#374151',
                           }}
                         >
-                          {score.total}
+                          {score.total.toFixed(2)}
                         </td>
                       ))}
                       {/* Add empty slots to maintain alignment */}
@@ -404,7 +486,7 @@ export function DetailedScorecard({
                     const r2 = facultyScores.find((s) => s.roundNumber === 2);
                     let avgDisplay = '—';
                     if (r1 && r2) {
-                      avgDisplay = ((r1.total + r2.total) / 2).toFixed(1);
+                      avgDisplay = ((r1.total + r2.total) / 2).toFixed(2);
                     }
                     return (
                       <td

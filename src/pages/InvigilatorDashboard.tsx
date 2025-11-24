@@ -103,8 +103,16 @@ export function InvigilatorDashboard() {
 
   // Check if current participants have already been scored
   useEffect(() => {
+    console.log('[InvigilatorDashboard] useEffect triggered - checking scores', {
+      hasSelectedEvent: !!selectedEvent,
+      hasSelectedParticipant: !!selectedParticipant,
+      hasCombatParticipant2: !!combatParticipant2,
+      hasInvigilatorId: !!auth.invigilatorId,
+    });
+
     const checkScores = async () => {
       if (!selectedEvent || !selectedParticipant || !auth.invigilatorId) {
+        console.log('[InvigilatorDashboard] Skipping check - missing required data');
         setAlreadyScored(false);
         return;
       }
@@ -113,6 +121,12 @@ export function InvigilatorDashboard() {
       if (combatParticipant2) {
         participantIds.push(combatParticipant2.id);
       }
+
+      console.log('[InvigilatorDashboard] Checking existing scores for:', {
+        event: selectedEvent.name,
+        participantIds,
+        invigilatorId: auth.invigilatorId,
+      });
 
       // For single participant events like Skipping, pass facultyId to check if faculty already scored
       const facultyId =
@@ -127,6 +141,8 @@ export function InvigilatorDashboard() {
         facultyId,
         activeSkippingRound
       );
+      
+      console.log('[InvigilatorDashboard] Already scored check result:', hasScore);
       setAlreadyScored(hasScore);
     };
 
@@ -150,6 +166,7 @@ export function InvigilatorDashboard() {
     setSelectedParticipant(null);
     setCombatParticipant2(null);
     setSubmitted(false);
+    setAlreadyScored(false);
 
     // Load template
     const tmpl = await getDocument<Template>('templates', event.templateId);
