@@ -6,6 +6,7 @@ import {
 } from '@/hooks/useRealtimeData';
 import { DetailedScorecard } from '@/components/DetailedScorecard';
 import { PhaseScorecard } from '@/components/PhaseScorecard';
+import { BestPlayers } from '@/components/BestPlayers';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function DisplayScreen() {
@@ -14,7 +15,7 @@ export function DisplayScreen() {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [view, setView] = useState<
-    'summary' | 'phase1' | 'phase2' | 'detailed'
+    'summary' | 'phase1' | 'phase2' | 'detailed' | 'best'
   >('phase1');
 
   const handleBackToLogin = () => {
@@ -73,6 +74,16 @@ export function DisplayScreen() {
             }`}
           >
             Show Phase 2 Scores
+          </button>
+          <button
+            onClick={() => setView('best')}
+            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              view === 'best'
+                ? 'bg-yellow-600 text-white shadow-lg'
+                : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            🏆 Best Players
           </button>
           <button
             onClick={() => setView('summary')}
@@ -136,6 +147,18 @@ export function DisplayScreen() {
               phaseNumber={2}
             />
           </div>
+        </div>
+      )}
+
+      {/* Best Players View */}
+      {view === 'best' && (
+        <div className="max-w-7xl mx-auto">
+          <BestPlayers
+            faculties={faculties}
+            events={events}
+            scores={scores}
+            participants={participants}
+          />
         </div>
       )}
 

@@ -247,6 +247,7 @@ firebase deploy --only hosting
 firebase deploy --only firestore:rules
 ```
 
+
 ---
 
 ## Firebase Free Tier Resources
