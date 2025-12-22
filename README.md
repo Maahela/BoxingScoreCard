@@ -20,7 +20,8 @@ _Complete participant roster and management_
 
 ### Combat Judge Scoring Interface
 
-![Mobile Judge View](docs/images/mobile-judge-view.jpg)
+<img src="docs/images/mobile-judge-view.jpg" alt="Mobile Judge View" width="400">
+
 _Mobile-optimized judge interface for live combat scoring_
 
 ### Phase 1 Scorecard
