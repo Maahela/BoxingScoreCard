@@ -6,6 +6,48 @@ A real-time web application for managing and scoring boxing competitions across 
 
 This application was developed to digitize the scoring process for interfaculty boxing competitions. It replaces manual scorekeeping with a centralized system that supports multiple concurrent events, real-time score aggregation, and mobile-optimized judge interfaces. The system handles participant registration, criteria-based scoring, and live display output for audience viewing.
 
+## Screenshots
+
+### Admin Homepage
+
+![Admin Homepage](docs/images/admin-homepage.png)
+_Active homepage where administrators can change and manage players_
+
+### Participant List
+
+![Participant List](docs/images/participant-list.png)
+_Complete participant roster and management_
+
+### Combat Judge Scoring Interface
+
+![Mobile Judge View](docs/images/mobile-judge-view.jpg)
+_Mobile-optimized judge interface for live combat scoring_
+
+### Phase 1 Scorecard
+
+![Phase 1 Scorecard](docs/images/phase1-scorecard.png)
+_Phase 1 final scorecard display_
+
+### Phase 2 Scorecard
+
+![Phase 2 Scorecard](docs/images/phase2-scorecard.png)
+_Phase 2 final scorecard display_
+
+### Final Scorecard Summary
+
+![Final Scorecard Summary](docs/images/final-scorecard-summary.png)
+_Comprehensive final scorecard summary_
+
+### Live Audit System
+
+![Live Audit System](docs/images/live-audit-system.png)
+_Real-time audit system showing live score updates_
+
+### Award Screen
+
+![Award Screen](docs/images/award-screen.png)
+_Award presentation screen_
+
 ## Tech Stack
 
 - **Frontend Framework**: React 18 with TypeScript
