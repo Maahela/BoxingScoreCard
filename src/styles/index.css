@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Montserrat:wght@500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,10 +7,52 @@
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900;
+    font-family: 'Montserrat', sans-serif;
   }
 }
 
 @layer components {
+  /* Boxing Event Typography */
+  .boxing-title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: white;
+  }
+
+  .boxing-panel {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+  }
+
+  .criteria-label {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    color: #ededed;
+  }
+
+  .score-control {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: white;
+    transition: all 180ms ease;
+  }
+
+  .score-control:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .score-control:active {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(0.98);
+  }
+
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
   }
@@ -43,5 +87,72 @@
 
   .score-button {
     @apply text-2xl font-bold px-6 py-4 rounded-lg active:scale-95 transform transition-transform;
+  }
+
+  /* Slider styling */
+  .slider {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 3px solid white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+  }
+
+  .slider::-webkit-slider-thumb:hover {
+    background: #2563eb;
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .slider::-webkit-slider-thumb:active {
+    transform: scale(1.2);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  }
+
+  .slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 3px solid white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+  }
+
+  .slider::-moz-range-thumb:hover {
+    background: #2563eb;
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .slider::-moz-range-thumb:active {
+    transform: scale(1.2);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  }
+
+  .slider:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .slider:disabled::-webkit-slider-thumb {
+    cursor: not-allowed;
+    background: #9ca3af;
+  }
+
+  .slider:disabled::-moz-range-thumb {
+    cursor: not-allowed;
+    background: #9ca3af;
   }
 }

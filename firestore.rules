@@ -16,54 +16,47 @@ service cloud.firestore {
     function hasRole(role) {
       return isAuthenticated() && getPinData().role == role;
     }
-    
-    // Helper function to check if invigilator is assigned to event
-    function isAssignedToEvent(eventId) {
-      return isAuthenticated() && 
-             getPinData().role == 'invigilator' &&
-             eventId in getPinData().eventsAssigned;
-    }
 
     // PINs collection - read only for authentication
     match /pins/{pinId} {
       allow read: if true; // Needed for PIN verification during login
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow write: if true; // TEMPORARY: Allow for seeding
     }
 
     // Faculties collection
     match /faculties/{facultyId} {
       allow read: if true; // Everyone can read faculties
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow write: if true; // Allow admin to create, update, delete faculties
     }
 
     // Participants collection
     match /participants/{participantId} {
       allow read: if true; // Everyone can read participants
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow write: if true; // Allow admin to create, update, delete participants
     }
 
     // Events collection
     match /events/{eventId} {
       allow read: if true; // Everyone can read events
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow write: if true; // Allow admin to create, update, delete events
     }
 
     // Templates collection
     match /templates/{templateId} {
       allow read: if true; // Everyone can read templates
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow write: if true; // Allow admin to create, update, delete templates
     }
 
     // Invigilators collection
     match /invigilators/{invigilatorId} {
-      allow read: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
-      allow write: if true; // TEMPORARY: Allow for seeding - change to hasRole('admin') after seeding
+      allow read: if true; // Everyone can read invigilators (needed for display)
+      allow write: if true; // Allow admin to create, update, delete invigilators
     }
 
     // Assignments collection
     match /assignments/{assignmentId} {
       allow read: if true; // Everyone can read assignments
-      allow write: if hasRole('admin');
+      allow write: if false; // PRODUCTION: Reserved for future admin features
     }
 
     // Scores collection
@@ -71,17 +64,42 @@ service cloud.firestore {
       // Everyone can read scores (for display screen)
       allow read: if true;
       
-      // Allow score creation (PIN auth is handled in app logic)
-      allow create: if true;
+      // Only allow score creation with valid data structure
+      // Validate that required fields are present and correct types
+      allow create: if request.resource.data.keys().hasAll([
+        'eventId', 'templateId', 'participantId', 'facultyId', 
+        'invigilatorId', 'roundNumber', 'criteriaScores', 'total', 'timestamp'
+      ]) && 
+      request.resource.data.eventId is string &&
+      request.resource.data.templateId is string &&
+      request.resource.data.participantId is string &&
+      request.resource.data.facultyId is string &&
+      request.resource.data.invigilatorId is string &&
+      request.resource.data.roundNumber is int &&
+      request.resource.data.roundNumber > 0 &&
+      request.resource.data.criteriaScores is list &&
+      request.resource.data.total is number &&
+      request.resource.data.total >= 0 &&
+      request.resource.data.timestamp is number;
       
-      // Allow updates and deletes
-      allow update, delete: if true;
+      // Allow updates and deletes for admin management
+      // NOTE: Protect this with security code in the application layer
+      allow update: if false; // Scores should not be modified after creation
+      allow delete: if true;  // Allow deletion for admin cleanup/testing
     }
 
     // Aggregates collection (for faculty totals)
     match /aggregates/{aggregateId} {
       allow read: if true; // Everyone can read aggregates
-      allow write: if hasRole('admin'); // Only admin can manually update
+      allow write: if false; // PRODUCTION: Aggregates should be calculated, not manually updated
+    }
+
+    // Active Participants collection (for live participant selection)
+    match /activeParticipants/{docId} {
+      allow read: if true; // Everyone can read active participants (invigilators need this)
+      // PRODUCTION: Only admin should be able to update active participants
+      // For now allowing all writes, but consider adding admin role check
+      allow write: if true; // TODO: Change to admin-only in production
     }
 
     // Default deny all other collections

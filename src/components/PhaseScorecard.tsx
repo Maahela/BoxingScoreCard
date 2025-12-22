@@ -1,27 +1,30 @@
 import { Fragment } from 'react';
+import { useCurrentAssignment } from '@/hooks/useRealtimeData';
 import type { Faculty, Event, Score, Participant } from '@/types';
 
-interface DetailedScorecardProps {
+interface PhaseScorecardProps {
   faculties: Faculty[];
   events: Event[];
   scores: Score[];
   participants: Participant[];
+  phaseNumber: 1 | 2;
 }
 
-export function DetailedScorecard({
+export function PhaseScorecard({
   faculties,
   events,
   scores,
   participants,
-}: DetailedScorecardProps) {
+  phaseNumber,
+}: PhaseScorecardProps) {
+  // Filter events by phase and remove duplicates based on event name
+  const phaseEventsRaw = events.filter((e) => e.phase === phaseNumber);
+
   // Remove duplicate events (same name) - this handles duplicate database entries
   const seenNames = new Set<string>();
-  const uniqueEvents = events.filter((event) => {
+  const phaseEvents = phaseEventsRaw.filter((event) => {
     if (seenNames.has(event.name)) {
-      console.warn(
-        'Duplicate event detected and removed in DetailedScorecard:',
-        event.name
-      );
+      console.warn('Duplicate event detected and removed:', event.name);
       return false;
     }
     seenNames.add(event.name);
@@ -31,14 +34,24 @@ export function DetailedScorecard({
   // Group scores by event and faculty
   const scoresByEventFaculty = new Map<string, Map<string, Score[]>>();
 
+  const { currentAssignment } = useCurrentAssignment();
+  const currentRound = currentAssignment?.roundNumber || 1;
+
   // Debug: Check for duplicate score IDs
   const scoreIds = scores.map((s) => s.id).filter((id) => id);
   const uniqueScoreIds = new Set(scoreIds);
   if (uniqueScoreIds.size !== scoreIds.length) {
-    console.warn('Duplicate score IDs detected in DetailedScorecard:', scores);
+    console.warn('Duplicate score IDs detected:', scores);
   }
 
   scores.forEach((score) => {
+    const event = events.find((e) => e.id === score.eventId);
+    if (event) {
+      // For Phase 1 events other than Skipping keep current round filtering
+      if (event.phase === 1 && event.name !== 'Skipping') {
+        if (score.roundNumber !== currentRound) return;
+      }
+    }
     if (!scoresByEventFaculty.has(score.eventId)) {
       scoresByEventFaculty.set(score.eventId, new Map());
     }
@@ -51,12 +64,12 @@ export function DetailedScorecard({
 
   // Process Combat events to average scores from two judges
   // For Boxing Combat, we need to group scores by participantId and average across judges
-  uniqueEvents.forEach((event) => {
+  phaseEvents.forEach((event) => {
     if (event.name === 'Boxing Combat') {
       const eventScoresMap = scoresByEventFaculty.get(event.id);
       if (!eventScoresMap) return;
 
-      console.log('[DetailedScorecard] Processing Combat event for averaging');
+      console.log('[PhaseScorecard] Processing Combat event for averaging');
 
       // Process each faculty's combat scores
       faculties.forEach((faculty) => {
@@ -64,7 +77,7 @@ export function DetailedScorecard({
         if (!facultyScores || facultyScores.length === 0) return;
 
         console.log(
-          `[DetailedScorecard] Faculty ${faculty.name} has ${facultyScores.length} combat scores`
+          `[PhaseScorecard] Faculty ${faculty.name} has ${facultyScores.length} combat scores`
         );
 
         // Group scores by participantId
@@ -77,14 +90,14 @@ export function DetailedScorecard({
         });
 
         console.log(
-          `[DetailedScorecard] Grouped into ${scoresByParticipant.size} participants`
+          `[PhaseScorecard] Grouped into ${scoresByParticipant.size} participants`
         );
 
         // Create averaged scores handling ANY number of judge entries (multiple bouts)
         const averagedScores: Score[] = [];
         scoresByParticipant.forEach((participantScores) => {
           console.log(
-            `[DetailedScorecard] Participant has ${participantScores.length} total combat score entries`
+            `[PhaseScorecard] Participant has ${participantScores.length} total combat score entries`
           );
 
           // Group by judge (invigilatorId) and take latest score per judge
@@ -96,14 +109,16 @@ export function DetailedScorecard({
             scoresByJudge.get(s.invigilatorId)!.push(s);
           });
 
+          // Get latest score per judge
           const latestScores = Array.from(scoresByJudge.values())
             .map((arr) => arr.sort((a, b) => b.timestamp - a.timestamp)[0])
             .filter(Boolean);
 
           if (latestScores.length >= 2) {
+            // Use the latest two distinct judge scores for averaging
             const [score1, score2] = latestScores.slice(0, 2);
             console.log(
-              `[DetailedScorecard] Averaging latest judge scores totals=${score1.total},${score2.total}`
+              `[PhaseScorecard] Averaging latest judge scores totals=${score1.total},${score2.total}`
             );
             const averagedCriteriaScores = score1.criteriaScores.map(
               (criteria, idx) => ({
@@ -119,17 +134,18 @@ export function DetailedScorecard({
               invigilatorId: 'averaged',
             });
           } else if (latestScores.length === 1) {
+            // Only one judge has scored yet – show their latest score
             console.log(
-              `[DetailedScorecard] Only one judge latest score total=${latestScores[0].total}`
+              `[PhaseScorecard] Only one judge latest score total=${latestScores[0].total}`
             );
             averagedScores.push(latestScores[0]);
           } else {
-            console.log('[DetailedScorecard] No valid judge scores found');
+            console.log('[PhaseScorecard] No valid judge scores found');
           }
         });
 
         console.log(
-          `[DetailedScorecard] Final averaged scores count: ${averagedScores.length}`
+          `[PhaseScorecard] Final averaged scores count: ${averagedScores.length}`
         );
         // Replace faculty scores with averaged scores
         eventScoresMap.set(faculty.id, averagedScores);
@@ -137,15 +153,15 @@ export function DetailedScorecard({
     }
   });
 
-  // Calculate faculty totals
+  // Calculate faculty totals for this phase
   const facultyTotals = new Map<string, number>();
   faculties.forEach((faculty) => {
     let total = 0;
-    uniqueEvents.forEach((event) => {
+    phaseEvents.forEach((event) => {
       const eventScores =
         scoresByEventFaculty.get(event.id)?.get(faculty.id) || [];
       if (eventScores.length > 0) {
-        // Skipping special handling: average of round 1 & 2 if both present
+        // Special handling for Skipping: average of two rounds if both present, else single round value
         let eventScore: number;
         if (event.name === 'Skipping') {
           const r1 = eventScores.find((s) => s.roundNumber === 1);
@@ -155,7 +171,7 @@ export function DetailedScorecard({
           } else if (r1) {
             eventScore = r1.total;
           } else if (r2) {
-            eventScore = r2.total;
+            eventScore = r2.total; // In case only round 2 exists
           } else {
             eventScore = 0;
           }
@@ -175,9 +191,9 @@ export function DetailedScorecard({
     (a, b) => (facultyTotals.get(b.id) || 0) - (facultyTotals.get(a.id) || 0)
   );
 
-  // Find the maximum number of participants per faculty across all events
+  // Find the maximum number of participants per faculty across phase events
   const maxParticipantsPerFaculty = Math.max(
-    ...uniqueEvents.map((event) =>
+    ...phaseEvents.map((event) =>
       Math.max(
         ...sortedFaculties.map((faculty) => {
           const facultyScores =
@@ -185,17 +201,24 @@ export function DetailedScorecard({
           return facultyScores.length;
         })
       )
-    )
+    ),
+    1 // Minimum of 1 to avoid 0
   );
 
   // Calculate total columns based on max participants
   const totalColumns = 1 + sortedFaculties.length * maxParticipantsPerFaculty;
 
+  // Debug: Check for duplicate events
+  const uniqueEventIds = new Set(phaseEvents.map((e) => e.id));
+  if (uniqueEventIds.size !== phaseEvents.length) {
+    console.warn('Duplicate events detected in PhaseScorecard:', phaseEvents);
+  }
+
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto space-y-6">
       {/* Individual Event Tables */}
-      {uniqueEvents.map((event, eventIndex) => {
-        const isLastEvent = eventIndex === uniqueEvents.length - 1;
+      {phaseEvents.map((event, eventIndex) => {
+        const isLastEvent = eventIndex === phaseEvents.length - 1;
 
         return (
           <table key={event.id} className="w-full border-collapse text-sm">
@@ -474,7 +497,7 @@ export function DetailedScorecard({
                 })}
               </tr>
 
-              {/* Skipping Average Row */}
+              {/* Skipping Average Row (two rounds) */}
               {event.name === 'Skipping' && (
                 <tr className="bg-yellow-500 font-bold">
                   <td
@@ -490,12 +513,15 @@ export function DetailedScorecard({
                   {sortedFaculties.map((faculty) => {
                     const facultyScores =
                       scoresByEventFaculty.get(event.id)?.get(faculty.id) || [];
+                    // Identify round scores
                     const r1 = facultyScores.find((s) => s.roundNumber === 1);
                     const r2 = facultyScores.find((s) => s.roundNumber === 2);
                     let avgDisplay = '—';
                     if (r1 && r2) {
-                      avgDisplay = ((r1.total + r2.total) / 2).toFixed(2);
+                      const avg = (r1.total + r2.total) / 2;
+                      avgDisplay = avg.toFixed(2);
                     }
+                    // Span across all possible slots for alignment
                     return (
                       <td
                         key={faculty.id}
@@ -542,14 +568,14 @@ export function DetailedScorecard({
                           backgroundColor: '#fbbf24',
                         }}
                       >
-                        {facultyScores.length > 0 ? avg.toFixed(1) : '0.0'}
+                        {facultyScores.length > 0 ? avg.toFixed(2) : '0.00'}
                       </td>
                     );
                   })}
                 </tr>
               )}
 
-              {/* Grand Total Row - only show in last event table */}
+              {/* Phase Total Row - only show in last event table */}
               {isLastEvent && (
                 <tr className="bg-blue-600">
                   <th
@@ -560,7 +586,7 @@ export function DetailedScorecard({
                       maxWidth: '250px',
                     }}
                   >
-                    FINAL TOTAL
+                    PHASE {phaseNumber} TOTAL
                   </th>
                   {sortedFaculties.map((faculty) => {
                     const total = facultyTotals.get(faculty.id) || 0;
@@ -572,7 +598,7 @@ export function DetailedScorecard({
                         className="border border-gray-600 px-3 py-3 text-center text-white font-bold text-xl"
                         style={{ backgroundColor: faculty.colorHex }}
                       >
-                        {total.toFixed(1)}
+                        {total.toFixed(2)}
                       </th>
                     );
                   })}

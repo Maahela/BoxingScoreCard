@@ -50,13 +50,13 @@ This document defines the scoring criteria for all events. These criteria are im
 
 **Total Maximum Score: 110 points**
 
-| Criteria     | Maximum Points | Description                                |
-| ------------ | -------------- | ------------------------------------------ |
-| Coordination | 20             | Hand-eye-foot coordination and rhythm      |
-| Balance      | 10             | Body control and stability during skipping |
-| Endurance    | 20             | Ability to maintain performance over time  |
-| Speed        | 20             | Rope rotation velocity and foot speed      |
-| Continuity   | 30             | Consistency without breaks or mistakes     |
+| Criteria        | Maximum Points | Description                                 |
+| --------------- | -------------- | ------------------------------------------- |
+| Coordination    | 20             | Hand-eye-foot coordination and rhythm       |
+| Balance         | 10             | Body control and stability during skipping  |
+| Endurance       | 20             | Ability to maintain performance over time   |
+| Speed           | 20             | Rope rotation velocity and foot speed       |
+| Continuity      | 30             | Consistency without breaks or mistakes      |
 
 **Judging Notes:**
 

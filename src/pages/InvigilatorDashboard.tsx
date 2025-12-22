@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   useRealtimeEvents,
   useRealtimeFaculties,
   useRealtimeParticipants,
-  useRealtimeTemplates,
 } from '@/hooks/useRealtimeData';
-import { getDocument, addScore } from '@/lib/firestoreHelpers';
+import { useActiveParticipants } from '@/hooks/useActiveParticipants';
+import {
+  getDocument,
+  addScore,
+  checkExistingScore,
+} from '@/lib/firestoreHelpers';
 import type { Event, Participant, Template, ScoreInputState } from '@/types';
 import { CriteriaList } from '@/components/CriteriaList';
-import { ParticipantCard } from '@/components/ParticipantCard';
+import { CombatScoreCard } from '@/components/CombatScoreCard';
 
 export function InvigilatorDashboard() {
   const { auth, logout } = useAuth();
@@ -18,35 +22,159 @@ export function InvigilatorDashboard() {
   const { events } = useRealtimeEvents();
   const { faculties } = useRealtimeFaculties();
   const { participants } = useRealtimeParticipants();
-  const { templates } = useRealtimeTemplates();
+  const { activeParticipants } = useActiveParticipants();
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedFaculty, setSelectedFaculty] = useState<string | null>(null);
   const [selectedParticipant, setSelectedParticipant] =
     useState<Participant | null>(null);
+  const [combatParticipant2, setCombatParticipant2] =
+    useState<Participant | null>(null);
   const [scores, setScores] = useState<ScoreInputState[]>([]);
+  const [scores2, setScores2] = useState<ScoreInputState[]>([]);
   const [template, setTemplate] = useState<Template | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [scoredParticipants, setScoredParticipants] = useState<Set<string>>(
-    new Set()
-  );
+  const [alreadyScored, setAlreadyScored] = useState(false);
 
-  // Filter events assigned to this invigilator
-  const assignedEvents = events.filter((e) =>
-    auth.eventsAssigned?.includes(e.id)
-  );
+  // Get admin-controlled active round (for skipping only)
+  const activeSkippingRound = activeParticipants?.activeSkippingRound || 1;
 
-  // Debug logging
-  console.log('Auth object:', auth);
-  console.log('All events:', events);
-  console.log('Assigned events:', assignedEvents);
+  // Get admin-controlled active phase
+  const activePhase = activeParticipants?.activePhase || 1;
+
+  // Automatically load active participant when event is selected
+  useEffect(() => {
+    if (!selectedEvent || !activeParticipants) {
+      return;
+    }
+
+    let activeParticipantId: string | null = null;
+    let activeParticipant2Id: string | null = null;
+
+    // Determine which active participant to use based on event
+    if (selectedEvent.name === 'Skipping') {
+      activeParticipantId = activeParticipants.skipping;
+    } else if (selectedEvent.name === 'Shadow Boxing') {
+      activeParticipantId = activeParticipants.shadowBoxing;
+    } else if (selectedEvent.name === 'Punching Bag') {
+      activeParticipantId = activeParticipants.punchingBag;
+    } else if (selectedEvent.name === 'Boxing Combat') {
+      activeParticipantId = activeParticipants.combat.participant1;
+      activeParticipant2Id = activeParticipants.combat.participant2;
+      console.log('Combat participants updated:', {
+        participant1: activeParticipantId,
+        participant2: activeParticipant2Id,
+      });
+    }
+
+    // Load participant 1
+    if (activeParticipantId) {
+      const participant = participants.find(
+        (p) => p.id === activeParticipantId
+      );
+      if (participant) {
+        console.log('Setting participant 1:', participant.name);
+        setSelectedParticipant(participant);
+        setSelectedFaculty(participant.facultyId);
+      } else {
+        console.warn('Participant 1 not found:', activeParticipantId);
+        setSelectedParticipant(null);
+      }
+    } else {
+      setSelectedParticipant(null);
+    }
+
+    // Load participant 2 for combat
+    if (activeParticipant2Id) {
+      const participant = participants.find(
+        (p) => p.id === activeParticipant2Id
+      );
+      if (participant) {
+        console.log('Setting participant 2:', participant.name);
+        setCombatParticipant2(participant);
+      } else {
+        console.warn('Participant 2 not found:', activeParticipant2Id);
+        setCombatParticipant2(null);
+      }
+    } else {
+      setCombatParticipant2(null);
+    }
+  }, [selectedEvent, activeParticipants, participants]);
+
+  // Check if current participants have already been scored
+  useEffect(() => {
+    console.log(
+      '[InvigilatorDashboard] useEffect triggered - checking scores',
+      {
+        hasSelectedEvent: !!selectedEvent,
+        hasSelectedParticipant: !!selectedParticipant,
+        hasCombatParticipant2: !!combatParticipant2,
+        hasInvigilatorId: !!auth.invigilatorId,
+      }
+    );
+
+    const checkScores = async () => {
+      if (!selectedEvent || !selectedParticipant || !auth.invigilatorId) {
+        console.log(
+          '[InvigilatorDashboard] Skipping check - missing required data'
+        );
+        setAlreadyScored(false);
+        return;
+      }
+
+      const participantIds = [selectedParticipant.id];
+      if (combatParticipant2) {
+        participantIds.push(combatParticipant2.id);
+      }
+
+      console.log('[InvigilatorDashboard] Checking existing scores for:', {
+        event: selectedEvent.name,
+        participantIds,
+        invigilatorId: auth.invigilatorId,
+      });
+
+      // For single participant events like Skipping, pass facultyId to check if faculty already scored
+      const facultyId =
+        selectedEvent.participantsRequired === 1
+          ? selectedParticipant.facultyId
+          : undefined;
+
+      const hasScore = await checkExistingScore(
+        selectedEvent.id,
+        participantIds,
+        auth.invigilatorId,
+        facultyId,
+        activeSkippingRound
+      );
+
+      console.log(
+        '[InvigilatorDashboard] Already scored check result:',
+        hasScore
+      );
+      setAlreadyScored(hasScore);
+    };
+
+    checkScores();
+  }, [
+    selectedEvent,
+    selectedParticipant,
+    combatParticipant2,
+    auth.invigilatorId,
+    activeSkippingRound,
+  ]);
+
+  // Filter events assigned to this invigilator AND match current active phase
+  const assignedEvents = events.filter(
+    (e) => auth.eventsAssigned?.includes(e.id) && e.phase === activePhase
+  );
 
   const handleEventSelect = async (event: Event) => {
     setSelectedEvent(event);
     setSelectedFaculty(null);
     setSelectedParticipant(null);
+    setCombatParticipant2(null);
     setSubmitted(false);
-    setScoredParticipants(new Set());
+    setAlreadyScored(false);
 
     // Load template
     const tmpl = await getDocument<Template>('templates', event.templateId);
@@ -54,24 +182,24 @@ export function InvigilatorDashboard() {
 
     // Initialize scores
     if (tmpl) {
-      setScores(
-        tmpl.criteria.map((c) => ({
-          criteriaId: c.id,
-          score: 0,
-          maxPoints: c.maxPoints,
-        }))
-      );
+      const initialScores = tmpl.criteria.map((c) => ({
+        criteriaId: c.id,
+        score: 0,
+        maxPoints: c.maxPoints,
+      }));
+      setScores(initialScores);
+      setScores2(initialScores); // For second combat participant
     }
-  };
-
-  const handleParticipantSelect = (participant: Participant) => {
-    setSelectedParticipant(participant);
-    setSelectedFaculty(participant.facultyId);
-    setSubmitted(false);
   };
 
   const handleScoreChange = (criteriaId: string, score: number) => {
     setScores((prev) =>
+      prev.map((s) => (s.criteriaId === criteriaId ? { ...s, score } : s))
+    );
+  };
+
+  const handleScore2Change = (criteriaId: string, score: number) => {
+    setScores2((prev) =>
       prev.map((s) => (s.criteriaId === criteriaId ? { ...s, score } : s))
     );
   };
@@ -89,13 +217,15 @@ export function InvigilatorDashboard() {
     const total = scores.reduce((sum, s) => sum + s.score, 0);
 
     try {
+      // Submit score for participant 1 (use admin-controlled active round for skipping)
       await addScore({
         eventId: selectedEvent.id,
         templateId: template.id,
         participantId: selectedParticipant.id,
         facultyId: selectedParticipant.facultyId,
         invigilatorId: auth.invigilatorId,
-        roundNumber: 1,
+        roundNumber:
+          selectedEvent.name === 'Skipping' ? activeSkippingRound : 1,
         criteriaScores: scores.map((s) => ({
           criteriaId: s.criteriaId,
           score: s.score,
@@ -104,28 +234,49 @@ export function InvigilatorDashboard() {
         timestamp: Date.now(),
       });
 
+      // If combat event and second participant exists, submit their score too
+      if (selectedEvent.name === 'Boxing Combat' && combatParticipant2) {
+        const total2 = scores2.reduce((sum, s) => sum + s.score, 0);
+        await addScore({
+          eventId: selectedEvent.id,
+          templateId: template.id,
+          participantId: combatParticipant2.id,
+          facultyId: combatParticipant2.facultyId,
+          invigilatorId: auth.invigilatorId,
+          roundNumber: 1,
+          criteriaScores: scores2.map((s) => ({
+            criteriaId: s.criteriaId,
+            score: s.score,
+          })),
+          total: total2,
+          timestamp: Date.now(),
+        });
+      }
+
       setSubmitted(true);
+      setAlreadyScored(true);
 
-      // Track scored participant
-      setScoredParticipants((prev) =>
-        new Set(prev).add(selectedParticipant.id)
-      );
-
-      // Reset scores for next participant
+      // Return to event selection after notification
       setTimeout(() => {
+        setSelectedEvent(null);
         setSelectedParticipant(null);
-        setScores(
-          template.criteria.map((c) => ({
-            criteriaId: c.id,
-            score: 0,
-            maxPoints: c.maxPoints,
-          }))
-        );
+        setCombatParticipant2(null);
         setSubmitted(false);
+        setAlreadyScored(false);
+        const initialScores = template.criteria.map((c) => ({
+          criteriaId: c.id,
+          score: 0,
+          maxPoints: c.maxPoints,
+        }));
+        setScores(initialScores);
+        setScores2(initialScores);
       }, 2000);
     } catch (error) {
       console.error('Error submitting score:', error);
-      alert('Failed to submit score. Please try again.');
+      // Don't expose internal error details to users
+      alert(
+        'Failed to submit score. Please check your connection and try again.'
+      );
     }
   };
 
@@ -153,7 +304,26 @@ export function InvigilatorDashboard() {
 
         <div className="card">
           <h2 className="text-xl font-semibold mb-4">Select Event</h2>
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg text-sm">
+
+          {/* Active Phase Indicator */}
+          <div
+            className={`mb-4 p-4 rounded-lg border-2 ${
+              activePhase === 1
+                ? 'bg-blue-50 border-blue-500'
+                : 'bg-red-50 border-red-500'
+            }`}
+          >
+            <div className="font-bold text-lg mb-2">
+              {activePhase === 1 ? '🔵 Phase 1 Active' : '🔴 Phase 2 Active'}
+            </div>
+            <div className="text-sm text-gray-700">
+              {activePhase === 1
+                ? 'Shadow Boxing, Punching Bag, and Skipping events are available'
+                : 'Boxing Combat event is now active'}
+            </div>
+          </div>
+
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
             <div className="font-semibold mb-1">Tournament Structure:</div>
             <div>
               • Phase 1: Shadow Boxing, Punching Bag, Skipping (simultaneous)
@@ -192,108 +362,13 @@ export function InvigilatorDashboard() {
     );
   }
 
-  // View: Participant Selection (skip for 1-participant events)
-  if (!selectedParticipant) {
-    const eventParticipants = participants.filter((p) =>
-      p.events.includes(selectedEvent.id)
-    );
+  // For Combat events, check if BOTH participants are selected
+  const isCombatEvent = selectedEvent.name === 'Boxing Combat';
+  const combatParticipantsMissing =
+    isCombatEvent && (!selectedParticipant || !combatParticipant2);
 
-    // Debug logging
-    console.log('Selected Event:', selectedEvent);
-    console.log('All Participants:', participants);
-    console.log('Filtered Event Participants:', eventParticipants);
-    console.log(
-      'Participants with events field:',
-      participants.map((p) => ({ name: p.name, events: p.events }))
-    );
-
-    // For 1-participant events (like Skipping), auto-select and go to scoring
-    if (selectedEvent.participantsRequired === 1) {
-      // Group by faculty and show one participant per faculty
-      const participantsByFaculty = new Map<string, Participant>();
-      eventParticipants.forEach((p) => {
-        // Take the first participant per faculty (admin should assign only one)
-        if (!participantsByFaculty.has(p.facultyId)) {
-          participantsByFaculty.set(p.facultyId, p);
-        }
-      });
-
-      return (
-        <div className="min-h-screen bg-gray-100 p-4">
-          <header className="mb-6">
-            <button
-              onClick={() => setSelectedEvent(null)}
-              className="text-blue-600 mb-2"
-            >
-              ← Back to Events
-            </button>
-            <h1 className="text-2xl font-bold">{selectedEvent.name}</h1>
-            <div className="mt-2 text-sm text-gray-600">
-              Phase {selectedEvent.phase} • 1 participant per faculty
-              (pre-assigned)
-            </div>
-          </header>
-
-          <div className="card">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Select Faculty to Score</h2>
-              <div className="text-sm text-gray-600">
-                Scored: {scoredParticipants.size} / {participantsByFaculty.size}
-              </div>
-            </div>
-
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-              <div className="font-semibold text-blue-800 mb-1">
-                ℹ️ Single Participant Event:
-              </div>
-              <div className="text-blue-700">
-                One participant per faculty has been pre-assigned by the admin
-                for this event.
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {Array.from(participantsByFaculty.entries()).map(
-                ([facultyId, participant]) => {
-                  const faculty = faculties.find((f) => f.id === facultyId);
-                  const isScored = scoredParticipants.has(participant.id);
-
-                  return (
-                    <div key={facultyId} className="relative">
-                      {isScored && (
-                        <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold z-10">
-                          ✓ Scored
-                        </div>
-                      )}
-                      <button
-                        onClick={() => handleParticipantSelect(participant)}
-                        className="w-full"
-                      >
-                        <ParticipantCard
-                          participant={participant}
-                          faculty={faculty}
-                          onClick={() => {}}
-                        />
-                      </button>
-                    </div>
-                  );
-                }
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // For 2-participant events, show full selection with grouping
-    const participantsByFaculty = new Map<string, Participant[]>();
-    eventParticipants.forEach((p) => {
-      if (!participantsByFaculty.has(p.facultyId)) {
-        participantsByFaculty.set(p.facultyId, []);
-      }
-      participantsByFaculty.get(p.facultyId)!.push(p);
-    });
-
+  // View: Waiting for admin to select active participant OR already scored
+  if (!selectedParticipant || alreadyScored || combatParticipantsMissing) {
     return (
       <div className="min-h-screen bg-gray-100 p-4">
         <header className="mb-6">
@@ -305,90 +380,141 @@ export function InvigilatorDashboard() {
           </button>
           <h1 className="text-2xl font-bold">{selectedEvent.name}</h1>
           <div className="mt-2 text-sm text-gray-600">
-            Phase {selectedEvent.phase} • {selectedEvent.participantsRequired}{' '}
-            participant{selectedEvent.participantsRequired > 1 ? 's' : ''} per
-            faculty
+            Phase {selectedEvent.phase}
           </div>
         </header>
 
         <div className="card">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">
-              Select Participant to Score
-            </h2>
-            <div className="text-sm text-gray-600">
-              Scored: {scoredParticipants.size} / {eventParticipants.length}
-            </div>
-          </div>
-
-          {selectedEvent.participantsRequired === 2 && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-              <div className="font-semibold text-amber-800 mb-1">
-                ⚠️ Scoring Requirement:
-              </div>
-              <div className="text-amber-700">
-                This event requires 2 participants per faculty. Final score =
-                average of both participants.
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-6">
-            {Array.from(participantsByFaculty.entries()).map(
-              ([facultyId, facultyParticipants]) => {
-                const faculty = faculties.find((f) => f.id === facultyId);
-                const scoredCount = facultyParticipants.filter((p) =>
-                  scoredParticipants.has(p.id)
-                ).length;
-                const isComplete =
-                  scoredCount >= selectedEvent.participantsRequired;
-
-                return (
-                  <div key={facultyId} className="border rounded-lg p-3">
-                    <div className="flex justify-between items-center mb-3">
-                      <div
-                        className="font-semibold"
-                        style={{ color: faculty?.colorHex }}
-                      >
-                        {faculty?.name}
-                      </div>
-                      <div className="text-sm">
-                        {isComplete ? (
-                          <span className="text-green-600 font-semibold">
-                            ✓ Complete
-                          </span>
-                        ) : (
-                          <span className="text-gray-600">
-                            {scoredCount}/{selectedEvent.participantsRequired}{' '}
-                            scored
-                          </span>
-                        )}
-                      </div>
+          <div className="text-center py-12">
+            {combatParticipantsMissing ? (
+              <>
+                <div className="text-6xl mb-4">⚠️</div>
+                <h2 className="text-2xl font-bold mb-2">
+                  Incomplete Combat Setup
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Boxing Combat requires BOTH participants to be selected.
+                </p>
+                <div className="p-4 bg-red-50 border border-red-300 rounded-lg inline-block">
+                  <div className="text-sm font-semibold text-red-900 mb-2">
+                    Current Selection:
+                  </div>
+                  <div className="text-sm text-red-800 text-left">
+                    <div>
+                      Participant 1:{' '}
+                      {selectedParticipant
+                        ? selectedParticipant.alias || selectedParticipant.name
+                        : '❌ Not selected'}
                     </div>
-                    <div className="space-y-2">
-                      {facultyParticipants.map((participant) => {
-                        const isScored = scoredParticipants.has(participant.id);
-                        return (
-                          <div key={participant.id} className="relative">
-                            {isScored && (
-                              <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold z-10">
-                                ✓ Scored
-                              </div>
-                            )}
-                            <ParticipantCard
-                              participant={participant}
-                              faculty={faculty}
-                              onClick={() =>
-                                handleParticipantSelect(participant)
-                              }
-                            />
-                          </div>
-                        );
-                      })}
+                    <div>
+                      Participant 2:{' '}
+                      {combatParticipant2
+                        ? combatParticipant2.alias || combatParticipant2.name
+                        : '❌ Not selected'}
                     </div>
                   </div>
-                );
-              }
+                  <div className="text-sm text-red-800 mt-3 font-medium">
+                    Please ask admin to select both participants in the Active
+                    Participants panel.
+                  </div>
+                </div>
+              </>
+            ) : alreadyScored ? (
+              <>
+                <div className="text-6xl mb-4">✅</div>
+                <h2 className="text-2xl font-bold mb-2">Already Scored</h2>
+                <p className="text-gray-600 mb-6">
+                  You have already submitted scores for{' '}
+                  {selectedParticipant ? (
+                    <span className="font-semibold">
+                      {selectedParticipant.alias || selectedParticipant.name}
+                      {combatParticipant2 && (
+                        <>
+                          {' '}
+                          and{' '}
+                          {combatParticipant2.alias || combatParticipant2.name}
+                        </>
+                      )}
+                    </span>
+                  ) : (
+                    'these participants'
+                  )}
+                  . Waiting for admin to select the next participant
+                  {selectedEvent.name === 'Boxing Combat' ? 's' : ''}.
+                </p>
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg inline-block">
+                  <div className="text-sm font-medium text-green-900">
+                    Your screen will update automatically when new participants
+                    are selected.
+                  </div>
+                </div>
+              </>
+            ) : selectedParticipant ? (
+              <>
+                <div className="text-6xl mb-4">👤</div>
+                <h2 className="text-2xl font-bold mb-2">
+                  Active Participant Selected
+                </h2>
+                <div className="text-gray-600 mb-6">
+                  <p className="mb-4">
+                    The admin has selected:{' '}
+                    <span className="font-semibold text-lg text-gray-900">
+                      {selectedParticipant.alias || selectedParticipant.name}
+                    </span>
+                    {combatParticipant2 && (
+                      <>
+                        {' '}
+                        and{' '}
+                        <span className="font-semibold text-lg text-gray-900">
+                          {combatParticipant2.alias || combatParticipant2.name}
+                        </span>
+                      </>
+                    )}
+                  </p>
+                  <p className="text-sm">
+                    But you have already scored{' '}
+                    {selectedEvent.name === 'Boxing Combat'
+                      ? 'these participants'
+                      : 'this participant'}{' '}
+                    before.
+                  </p>
+                </div>
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg inline-block">
+                  <div className="text-sm font-medium text-yellow-900">
+                    Waiting for admin to select new participants...
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-6xl mb-4">⏳</div>
+                <h2 className="text-2xl font-bold mb-2">
+                  Waiting for Admin Selection
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  The admin will select the active participant
+                  {selectedEvent.name === 'Boxing Combat' ? 's' : ''} for this
+                  event. Your screen will update automatically.
+                </p>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg inline-block mb-4">
+                  <div className="text-sm font-medium text-blue-900">
+                    {selectedEvent.name === 'Boxing Combat'
+                      ? 'Waiting for both combat participants...'
+                      : 'Waiting for participant selection...'}
+                  </div>
+                </div>
+                {!activeParticipants && (
+                  <div className="p-4 bg-orange-50 border border-orange-300 rounded-lg inline-block">
+                    <div className="text-sm font-semibold text-orange-900 mb-1">
+                      ⚠️ Setup Required
+                    </div>
+                    <div className="text-sm text-orange-800">
+                      The admin needs to go to the "Active Participants" tab and
+                      save participant selections first.
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -398,52 +524,178 @@ export function InvigilatorDashboard() {
 
   // View: Scoring
   const faculty = faculties.find((f) => f.id === selectedFaculty);
+  const isCombat = selectedEvent.name === 'Boxing Combat';
+  const combatFaculty2 = combatParticipant2
+    ? faculties.find((f) => f.id === combatParticipant2.facultyId)
+    : undefined;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 pb-24">
-      <header className="mb-6">
-        <button
-          onClick={() => setSelectedParticipant(null)}
-          className="text-blue-600 mb-2"
+    <div
+      className={`min-h-screen p-2 sm:p-4 pb-24 sm:pb-32 ${
+        isCombat ? 'bg-gray-900' : 'bg-gray-100'
+      }`}
+    >
+      {/* Combat Header */}
+      {isCombat && (
+        <header className="mb-4 sm:mb-6">
+          <button
+            onClick={() => {
+              setSelectedEvent(null);
+              setSelectedParticipant(null);
+              setCombatParticipant2(null);
+            }}
+            className="text-white bg-black/30 px-3 sm:px-4 py-2 rounded-lg border border-white/20 hover:bg-black/50 transition-all mb-2 text-sm sm:text-base"
+          >
+            ← Back to Events
+          </button>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold boxing-title text-white drop-shadow-lg">
+            {selectedEvent.name}
+          </h1>
+        </header>
+      )}
+
+      {/* Non-Combat Header */}
+      {!isCombat && (
+        <header className="mb-6">
+          <button
+            onClick={() => {
+              setSelectedEvent(null);
+              setSelectedParticipant(null);
+              setCombatParticipant2(null);
+            }}
+            className="text-blue-600 mb-2"
+          >
+            ← Back to Events
+          </button>
+          <h1 className="text-xl font-bold">{selectedEvent.name}</h1>
+        </header>
+      )}
+
+      {/* Display active participants */}
+      <div className={`mt-4 space-y-2 ${isCombat ? 'max-w-5xl mx-auto' : ''}`}>
+        <div
+          className={`p-3 ${
+            isCombat ? 'bg-black/30 border-white/20' : 'bg-white'
+          } border-2 border-blue-500 rounded-lg ${
+            isCombat ? 'backdrop-blur-sm' : ''
+          }`}
         >
-          ← Back to Participants
-        </button>
-        <h1 className="text-xl font-bold">{selectedEvent.name}</h1>
-        <div className="mt-2">
-          <div className="font-semibold text-lg">
-            {selectedParticipant.name}
+          <div
+            className={`text-xs mb-1 ${
+              isCombat ? 'text-gray-300' : 'text-gray-500'
+            }`}
+          >
+            {isCombat ? 'Participant 1' : 'Active Participant'}
+          </div>
+          <div
+            className={`font-semibold text-lg ${isCombat ? 'text-white' : ''}`}
+          >
+            {selectedParticipant.alias || selectedParticipant.name}
           </div>
           {faculty && (
-            <div className="text-sm" style={{ color: faculty.colorHex }}>
+            <div
+              className={`text-sm font-medium ${
+                isCombat ? 'text-gray-200' : ''
+              }`}
+              style={{ color: isCombat ? '#EDEDED' : faculty.colorHex }}
+            >
               {faculty.name}
             </div>
           )}
         </div>
-      </header>
+
+        {isCombat && combatParticipant2 && (
+          <div className="p-3 bg-black/30 border-2 border-green-500 rounded-lg backdrop-blur-sm border-white/20">
+            <div className="text-xs text-gray-300 mb-1">Participant 2</div>
+            <div className="font-semibold text-lg text-white">
+              {combatParticipant2.alias || combatParticipant2.name}
+            </div>
+            {combatFaculty2 && (
+              <div
+                className="text-sm font-medium text-gray-200"
+                style={{ color: '#EDEDED' }}
+              >
+                {combatFaculty2.name}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Skipping active round indicator */}
+      {selectedEvent.name === 'Skipping' && (
+        <div className="max-w-3xl mx-auto mt-4 mb-2">
+          <div className="p-4 bg-green-50 border-2 border-green-500 rounded-lg">
+            <div className="text-center">
+              <div className="text-sm text-gray-600 mb-1">Active Round</div>
+              <div className="text-2xl font-bold text-green-700">
+                Skipping - Round {activeSkippingRound}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                (Admin-controlled)
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {template && (
-        <div className="card">
-          <CriteriaList
-            criteria={template.criteria}
-            scores={scores}
-            onScoreChange={handleScoreChange}
-            disabled={submitted}
-          />
+        <div className={isCombat ? 'max-w-5xl mx-auto' : ''}>
+          {isCombat && combatParticipant2 ? (
+            <CombatScoreCard
+              criteria={template.criteria}
+              participant1={selectedParticipant}
+              participant2={combatParticipant2}
+              faculty1={faculty}
+              faculty2={combatFaculty2}
+              scores1={scores}
+              scores2={scores2}
+              onScore1Change={handleScoreChange}
+              onScore2Change={handleScore2Change}
+              disabled={submitted}
+            />
+          ) : (
+            <div className="card mb-4">
+              <h3 className="text-lg font-bold mb-3 text-blue-600">
+                Criteria Scores
+              </h3>
+              <CriteriaList
+                criteria={template.criteria}
+                scores={scores}
+                onScoreChange={handleScoreChange}
+                disabled={submitted}
+              />
+            </div>
+          )}
         </div>
       )}
 
       {/* Fixed Submit Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg">
+      <div
+        className={`fixed bottom-0 left-0 right-0 p-3 sm:p-4 border-t shadow-lg z-20 ${
+          isCombat ? 'bg-black/70 backdrop-blur-lg border-white/20' : 'bg-white'
+        }`}
+      >
         {submitted ? (
-          <div className="btn btn-success w-full text-lg pointer-events-none">
+          <div
+            className={`btn w-full text-base sm:text-lg pointer-events-none ${
+              isCombat ? 'bg-green-600 text-white' : 'btn-success'
+            }`}
+          >
             ✓ Submitted Successfully!
           </div>
         ) : (
           <button
             onClick={handleSubmit}
-            className="btn btn-primary w-full text-lg"
+            className={`btn w-full font-bold ${
+              isCombat
+                ? 'bg-gradient-to-r from-red-600 to-blue-600 text-white hover:from-red-700 hover:to-blue-700 py-3 sm:py-4 text-lg sm:text-xl'
+                : 'btn-primary text-lg'
+            }`}
           >
-            Submit Scores
+            {selectedEvent.name === 'Skipping'
+              ? `Submit Skipping R${activeSkippingRound} Score`
+              : `Submit ${isCombat && combatParticipant2 ? 'Both ' : ''}Scores`}
           </button>
         )}
       </div>

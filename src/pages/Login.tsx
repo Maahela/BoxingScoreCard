@@ -15,6 +15,20 @@ export function Login() {
     setError('');
     setLoading(true);
 
+    // Basic PIN validation
+    if (pin.length < 4 || pin.length > 10) {
+      setError('Invalid PIN format');
+      setLoading(false);
+      return;
+    }
+
+    // Check for non-numeric characters
+    if (!/^[0-9]+$/.test(pin)) {
+      setError('PIN must contain only numbers');
+      setLoading(false);
+      return;
+    }
+
     try {
       const pinData = await verifyPin(pin);
 
@@ -53,7 +67,15 @@ export function Login() {
     <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
       <div className="card max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          {/* University Logo */}
+          <div className="flex justify-center mb-4">
+            <img
+              src="/images/ucolombo-logo.png"
+              alt="University of Colombo Logo"
+              className="h-24 w-24 object-contain"
+            />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Interfaculty Freshers' Boxing Tournament 2025
           </h1>
           <p className="text-gray-600">University of Colombo</p>

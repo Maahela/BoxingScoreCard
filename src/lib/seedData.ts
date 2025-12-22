@@ -5,6 +5,8 @@ import {
   addDoc,
   setDoc,
   doc,
+  getDocs,
+  deleteDoc,
 } from 'firebase/firestore';
 import * as dotenv from 'dotenv';
 
@@ -45,6 +47,32 @@ async function seedData() {
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
+    // Clear all existing data first
+    console.log('🗑️ Clearing existing data...');
+    const collections = [
+      'scores',
+      'participants',
+      'events',
+      'templates',
+      'faculties',
+      'invigilators',
+      'activeParticipants',
+      'pins',
+    ];
+
+    for (const collectionName of collections) {
+      const collectionRef = collection(db, collectionName);
+      const querySnapshot = await getDocs(collectionRef);
+      const deletePromises = querySnapshot.docs.map((doc) =>
+        deleteDoc(doc.ref)
+      );
+      await Promise.all(deletePromises);
+      console.log(
+        `✓ Cleared ${querySnapshot.docs.length} documents from ${collectionName}`
+      );
+    }
+    console.log('✅ All collections cleared!\n');
+
     // 1. Create PINs for authentication
     console.log('Creating PINs...');
     await setDoc(doc(db, 'pins', 'admin-pin'), {
@@ -62,11 +90,12 @@ async function seedData() {
     // 2. Create Faculties with fixed IDs
     console.log('Creating faculties...');
     const faculties = [
-      { id: 'ucsc', name: 'UCSC', colorHex: '#3B82F6', order: 0 },
-      { id: 'management', name: 'Management', colorHex: '#EF4444', order: 1 },
-      { id: 'technology', name: 'Technology', colorHex: '#10B981', order: 2 },
-      { id: 'science', name: 'Science', colorHex: '#F59E0B', order: 3 },
-      { id: 'nursing', name: 'Nursing', colorHex: '#8B5CF6', order: 4 },
+      { id: 'fmf', name: 'FMF', colorHex: '#3B82F6', order: 0 },
+      { id: 'fos', name: 'FOS', colorHex: '#EF4444', order: 1 },
+      { id: 'ucfm', name: 'UCFM', colorHex: '#10B981', order: 2 },
+      { id: 'fon', name: 'FON', colorHex: '#F59E0B', order: 3 },
+      { id: 'ucsc', name: 'UCSC', colorHex: '#8B5CF6', order: 4 },
+      { id: 'fot', name: 'FOT', colorHex: '#EC4899', order: 5 },
     ];
 
     const facultyIds: Record<string, string> = {};
@@ -256,6 +285,12 @@ async function seedData() {
         eventsAssigned: [eventIds['Boxing Combat']],
         active: true,
       },
+      {
+        name: 'Judge 5 - Combat Judge 2',
+        pin: '555555',
+        eventsAssigned: [eventIds['Boxing Combat']],
+        active: true,
+      },
     ];
 
     const invigilatorIds: Record<string, string> = {};
@@ -280,70 +315,143 @@ async function seedData() {
     // 6. Create Participants
     console.log('Creating participants...');
     const participants = [
-      // UCSC
+      // FMF - Participant 1 (All Phase 1 + Combat + Skipping)
       {
         name: 'John Doe',
-        facultyId: facultyIds['UCSC'],
+        facultyId: facultyIds['FMF'],
         alias: 'Thunder',
-        events: Object.values(eventIds),
+        events: [
+          eventIds['Skipping'],
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
       },
+      // FMF - Participant 2 (All Phase 1 except Skipping + Combat)
       {
         name: 'Jane Smith',
-        facultyId: facultyIds['UCSC'],
+        facultyId: facultyIds['FMF'],
         alias: 'Lightning',
-        events: Object.values(eventIds),
+        events: [
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
       },
-      // Management
+      // FOS - Participant 1 (All Phase 1 + Combat + Skipping)
       {
         name: 'Mike Johnson',
-        facultyId: facultyIds['Management'],
+        facultyId: facultyIds['FOS'],
         alias: 'The Bull',
-        events: Object.values(eventIds),
+        events: [
+          eventIds['Skipping'],
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
       },
+      // FOS - Participant 2 (All Phase 1 except Skipping + Combat)
       {
         name: 'Sarah Williams',
-        facultyId: facultyIds['Management'],
+        facultyId: facultyIds['FOS'],
         alias: 'Viper',
-        events: Object.values(eventIds),
+        events: [
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
       },
-      // Technology
+      // UCFM - Participant 1 (All Phase 1 + Combat + Skipping)
       {
         name: 'Alex Brown',
-        facultyId: facultyIds['Technology'],
+        facultyId: facultyIds['UCFM'],
         alias: 'Rocket',
-        events: Object.values(eventIds),
+        events: [
+          eventIds['Skipping'],
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
       },
+      // UCFM - Participant 2 (All Phase 1 except Skipping + Combat)
       {
         name: 'Emily Davis',
-        facultyId: facultyIds['Technology'],
+        facultyId: facultyIds['UCFM'],
         alias: 'Phoenix',
-        events: Object.values(eventIds),
+        events: [
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
       },
-      // Science
+      // FON - Participant 1 (All Phase 1 + Combat + Skipping)
       {
         name: 'Chris Wilson',
-        facultyId: facultyIds['Science'],
+        facultyId: facultyIds['FON'],
         alias: 'Titan',
-        events: Object.values(eventIds),
+        events: [
+          eventIds['Skipping'],
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
       },
+      // FON - Participant 2 (All Phase 1 except Skipping + Combat)
       {
         name: 'Lisa Martinez',
-        facultyId: facultyIds['Science'],
+        facultyId: facultyIds['FON'],
         alias: 'Blaze',
-        events: Object.values(eventIds),
+        events: [
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
       },
-      // Nursing
+      // UCSC - Participant 1 (All Phase 1 + Combat + Skipping)
       {
         name: 'David Lee',
-        facultyId: facultyIds['Nursing'],
+        facultyId: facultyIds['UCSC'],
         alias: 'Hawk',
-        events: Object.values(eventIds),
+        events: [
+          eventIds['Skipping'],
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
       },
+      // UCSC - Participant 2 (All Phase 1 except Skipping + Combat)
       {
         name: 'Rachel Green',
-        facultyId: facultyIds['Nursing'],
+        facultyId: facultyIds['UCSC'],
         alias: 'Storm',
-        events: Object.values(eventIds),
+        events: [
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
+      },
+      // FOT - Participant 1 (All Phase 1 + Combat + Skipping)
+      {
+        name: 'Thomas Anderson',
+        facultyId: facultyIds['FOT'],
+        alias: 'Apex',
+        events: [
+          eventIds['Skipping'],
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
+      },
+      // FOT - Participant 2 (All Phase 1 except Skipping + Combat)
+      {
+        name: 'Sophia Roberts',
+        facultyId: facultyIds['FOT'],
+        alias: 'Cobra',
+        events: [
+          eventIds['Shadow Boxing'],
+          eventIds['Punching Bag'],
+          eventIds['Boxing Combat'],
+        ],
       },
     ];
 
@@ -363,8 +471,8 @@ async function seedData() {
       {
         eventId: eventIds['Shadow Boxing'],
         templateId: templateIds['Shadow Boxing'],
-        participantId: participantIds[0], // UCSC - Thunder
-        facultyId: facultyIds['UCSC'],
+        participantId: participantIds[0], // FMF - Thunder
+        facultyId: facultyIds['FMF'],
         invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
         roundNumber: 1,
         criteriaScores: [
@@ -382,8 +490,8 @@ async function seedData() {
       {
         eventId: eventIds['Shadow Boxing'],
         templateId: templateIds['Shadow Boxing'],
-        participantId: participantIds[1], // UCSC - Lightning
-        facultyId: facultyIds['UCSC'],
+        participantId: participantIds[1], // FMF - Lightning
+        facultyId: facultyIds['FMF'],
         invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
         roundNumber: 1,
         criteriaScores: [
@@ -401,8 +509,8 @@ async function seedData() {
       {
         eventId: eventIds['Shadow Boxing'],
         templateId: templateIds['Shadow Boxing'],
-        participantId: participantIds[2], // Management - The Bull
-        facultyId: facultyIds['Management'],
+        participantId: participantIds[2], // FOS - The Bull
+        facultyId: facultyIds['FOS'],
         invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
         roundNumber: 1,
         criteriaScores: [
@@ -420,8 +528,8 @@ async function seedData() {
       {
         eventId: eventIds['Shadow Boxing'],
         templateId: templateIds['Shadow Boxing'],
-        participantId: participantIds[3], // Management - Viper
-        facultyId: facultyIds['Management'],
+        participantId: participantIds[3], // FOS - Viper
+        facultyId: facultyIds['FOS'],
         invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
         roundNumber: 1,
         criteriaScores: [
@@ -439,8 +547,8 @@ async function seedData() {
       {
         eventId: eventIds['Shadow Boxing'],
         templateId: templateIds['Shadow Boxing'],
-        participantId: participantIds[4], // Technology - Rocket
-        facultyId: facultyIds['Technology'],
+        participantId: participantIds[4], // UCFM - Rocket
+        facultyId: facultyIds['UCFM'],
         invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
         roundNumber: 1,
         criteriaScores: [
@@ -458,8 +566,8 @@ async function seedData() {
       {
         eventId: eventIds['Shadow Boxing'],
         templateId: templateIds['Shadow Boxing'],
-        participantId: participantIds[5], // Technology - Phoenix
-        facultyId: facultyIds['Technology'],
+        participantId: participantIds[5], // UCFM - Phoenix
+        facultyId: facultyIds['UCFM'],
         invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
         roundNumber: 1,
         criteriaScores: [
@@ -477,8 +585,8 @@ async function seedData() {
       {
         eventId: eventIds['Shadow Boxing'],
         templateId: templateIds['Shadow Boxing'],
-        participantId: participantIds[6], // Science - Titan
-        facultyId: facultyIds['Science'],
+        participantId: participantIds[6], // FON - Titan
+        facultyId: facultyIds['FON'],
         invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
         roundNumber: 1,
         criteriaScores: [
@@ -496,8 +604,8 @@ async function seedData() {
       {
         eventId: eventIds['Shadow Boxing'],
         templateId: templateIds['Shadow Boxing'],
-        participantId: participantIds[7], // Science - Blaze
-        facultyId: facultyIds['Science'],
+        participantId: participantIds[7], // FON - Blaze
+        facultyId: facultyIds['FON'],
         invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
         roundNumber: 1,
         criteriaScores: [
@@ -512,12 +620,12 @@ async function seedData() {
         total: 95,
         timestamp: Date.now(),
       },
-      // Shadow Boxing - Nursing
+      // Shadow Boxing - UCSC
       {
         eventId: eventIds['Shadow Boxing'],
         templateId: templateIds['Shadow Boxing'],
-        participantId: participantIds[8], // Nursing - Hawk
-        facultyId: facultyIds['Nursing'],
+        participantId: participantIds[8], // UCSC - Hawk
+        facultyId: facultyIds['UCSC'],
         invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
         roundNumber: 1,
         criteriaScores: [
@@ -535,8 +643,8 @@ async function seedData() {
       {
         eventId: eventIds['Shadow Boxing'],
         templateId: templateIds['Shadow Boxing'],
-        participantId: participantIds[9], // Nursing - Storm
-        facultyId: facultyIds['Nursing'],
+        participantId: participantIds[9], // UCSC - Storm
+        facultyId: facultyIds['UCSC'],
         invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
         roundNumber: 1,
         criteriaScores: [
@@ -551,12 +659,51 @@ async function seedData() {
         total: 95,
         timestamp: Date.now(),
       },
+      // Shadow Boxing - FOT
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[10], // FOT - Apex
+        facultyId: facultyIds['FOT'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 10 },
+          { criteriaId: 'boxing_stance', score: 10 },
+          { criteriaId: 'leg_position_distance', score: 9 },
+          { criteriaId: 'defense', score: 10 },
+          { criteriaId: 'correct_punches', score: 24 },
+          { criteriaId: 'punches_combination', score: 25 },
+          { criteriaId: 'endurance', score: 10 },
+        ],
+        total: 98,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Shadow Boxing'],
+        templateId: templateIds['Shadow Boxing'],
+        participantId: participantIds[11], // FOT - Cobra
+        facultyId: facultyIds['FOT'],
+        invigilatorId: invigilatorIds['Judge 1 - Shadow Boxing'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'head_position', score: 9 },
+          { criteriaId: 'boxing_stance', score: 10 },
+          { criteriaId: 'leg_position_distance', score: 10 },
+          { criteriaId: 'defense', score: 9 },
+          { criteriaId: 'correct_punches', score: 23 },
+          { criteriaId: 'punches_combination', score: 24 },
+          { criteriaId: 'endurance', score: 9 },
+        ],
+        total: 94,
+        timestamp: Date.now(),
+      },
       // Punching Bag - All Faculties
       {
         eventId: eventIds['Punching Bag'],
         templateId: templateIds['Punching Bag'],
-        participantId: participantIds[0], // UCSC - Thunder
-        facultyId: facultyIds['UCSC'],
+        participantId: participantIds[0], // FMF - Thunder
+        facultyId: facultyIds['FMF'],
         invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
         roundNumber: 1,
         criteriaScores: [
@@ -572,8 +719,8 @@ async function seedData() {
       {
         eventId: eventIds['Punching Bag'],
         templateId: templateIds['Punching Bag'],
-        participantId: participantIds[1], // UCSC - Lightning
-        facultyId: facultyIds['UCSC'],
+        participantId: participantIds[1], // FMF - Lightning
+        facultyId: facultyIds['FMF'],
         invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
         roundNumber: 1,
         criteriaScores: [
@@ -589,8 +736,8 @@ async function seedData() {
       {
         eventId: eventIds['Punching Bag'],
         templateId: templateIds['Punching Bag'],
-        participantId: participantIds[4], // Technology - Rocket
-        facultyId: facultyIds['Technology'],
+        participantId: participantIds[4], // UCFM - Rocket
+        facultyId: facultyIds['UCFM'],
         invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
         roundNumber: 1,
         criteriaScores: [
@@ -606,8 +753,8 @@ async function seedData() {
       {
         eventId: eventIds['Punching Bag'],
         templateId: templateIds['Punching Bag'],
-        participantId: participantIds[5], // Technology - Phoenix
-        facultyId: facultyIds['Technology'],
+        participantId: participantIds[5], // UCFM - Phoenix
+        facultyId: facultyIds['UCFM'],
         invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
         roundNumber: 1,
         criteriaScores: [
@@ -623,8 +770,8 @@ async function seedData() {
       {
         eventId: eventIds['Punching Bag'],
         templateId: templateIds['Punching Bag'],
-        participantId: participantIds[2], // Management - The Bull
-        facultyId: facultyIds['Management'],
+        participantId: participantIds[2], // FOS - The Bull
+        facultyId: facultyIds['FOS'],
         invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
         roundNumber: 1,
         criteriaScores: [
@@ -640,8 +787,8 @@ async function seedData() {
       {
         eventId: eventIds['Punching Bag'],
         templateId: templateIds['Punching Bag'],
-        participantId: participantIds[3], // Management - Viper
-        facultyId: facultyIds['Management'],
+        participantId: participantIds[3], // FOS - Viper
+        facultyId: facultyIds['FOS'],
         invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
         roundNumber: 1,
         criteriaScores: [
@@ -657,8 +804,8 @@ async function seedData() {
       {
         eventId: eventIds['Punching Bag'],
         templateId: templateIds['Punching Bag'],
-        participantId: participantIds[6], // Science - Titan
-        facultyId: facultyIds['Science'],
+        participantId: participantIds[6], // FON - Titan
+        facultyId: facultyIds['FON'],
         invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
         roundNumber: 1,
         criteriaScores: [
@@ -674,8 +821,8 @@ async function seedData() {
       {
         eventId: eventIds['Punching Bag'],
         templateId: templateIds['Punching Bag'],
-        participantId: participantIds[7], // Science - Blaze
-        facultyId: facultyIds['Science'],
+        participantId: participantIds[7], // FON - Blaze
+        facultyId: facultyIds['FON'],
         invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
         roundNumber: 1,
         criteriaScores: [
@@ -688,12 +835,12 @@ async function seedData() {
         total: 84,
         timestamp: Date.now(),
       },
-      // Punching Bag - Nursing
+      // Punching Bag - UCSC
       {
         eventId: eventIds['Punching Bag'],
         templateId: templateIds['Punching Bag'],
-        participantId: participantIds[8], // Nursing - Hawk
-        facultyId: facultyIds['Nursing'],
+        participantId: participantIds[8], // UCSC - Hawk
+        facultyId: facultyIds['UCSC'],
         invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
         roundNumber: 1,
         criteriaScores: [
@@ -709,8 +856,8 @@ async function seedData() {
       {
         eventId: eventIds['Punching Bag'],
         templateId: templateIds['Punching Bag'],
-        participantId: participantIds[9], // Nursing - Storm
-        facultyId: facultyIds['Nursing'],
+        participantId: participantIds[9], // UCSC - Storm
+        facultyId: facultyIds['UCSC'],
         invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
         roundNumber: 1,
         criteriaScores: [
@@ -723,12 +870,47 @@ async function seedData() {
         total: 90,
         timestamp: Date.now(),
       },
-      // Skipping - One per faculty
+      // Punching Bag - FOT
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[10], // FOT - Apex
+        facultyId: facultyIds['FOT'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 19 },
+          { criteriaId: 'speed', score: 19 },
+          { criteriaId: 'technique_tactics', score: 29 },
+          { criteriaId: 'combination_punches', score: 19 },
+          { criteriaId: 'endurance', score: 10 },
+        ],
+        total: 96,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Punching Bag'],
+        templateId: templateIds['Punching Bag'],
+        participantId: participantIds[11], // FOT - Cobra
+        facultyId: facultyIds['FOT'],
+        invigilatorId: invigilatorIds['Judge 2 - Punching Bag'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'power', score: 18 },
+          { criteriaId: 'speed', score: 17 },
+          { criteriaId: 'technique_tactics', score: 28 },
+          { criteriaId: 'combination_punches', score: 18 },
+          { criteriaId: 'endurance', score: 9 },
+        ],
+        total: 90,
+        timestamp: Date.now(),
+      },
+      // Skipping - One per faculty (first participant of each faculty)
       {
         eventId: eventIds['Skipping'],
         templateId: templateIds['Skipping'],
-        participantId: participantIds[1], // UCSC - Lightning
-        facultyId: facultyIds['UCSC'],
+        participantId: participantIds[0], // FMF - Thunder
+        facultyId: facultyIds['FMF'],
         invigilatorId: invigilatorIds['Judge 3 - Skipping'],
         roundNumber: 1,
         criteriaScores: [
@@ -745,8 +927,8 @@ async function seedData() {
       {
         eventId: eventIds['Skipping'],
         templateId: templateIds['Skipping'],
-        participantId: participantIds[5], // Technology - Phoenix
-        facultyId: facultyIds['Technology'],
+        participantId: participantIds[4], // UCFM - Rocket
+        facultyId: facultyIds['UCFM'],
         invigilatorId: invigilatorIds['Judge 3 - Skipping'],
         roundNumber: 1,
         criteriaScores: [
@@ -763,8 +945,8 @@ async function seedData() {
       {
         eventId: eventIds['Skipping'],
         templateId: templateIds['Skipping'],
-        participantId: participantIds[2], // Management - The Bull
-        facultyId: facultyIds['Management'],
+        participantId: participantIds[2], // FOS - The Bull
+        facultyId: facultyIds['FOS'],
         invigilatorId: invigilatorIds['Judge 3 - Skipping'],
         roundNumber: 1,
         criteriaScores: [
@@ -781,8 +963,8 @@ async function seedData() {
       {
         eventId: eventIds['Skipping'],
         templateId: templateIds['Skipping'],
-        participantId: participantIds[6], // Science - Titan
-        facultyId: facultyIds['Science'],
+        participantId: participantIds[6], // FON - Titan
+        facultyId: facultyIds['FON'],
         invigilatorId: invigilatorIds['Judge 3 - Skipping'],
         roundNumber: 1,
         criteriaScores: [
@@ -799,8 +981,8 @@ async function seedData() {
       {
         eventId: eventIds['Skipping'],
         templateId: templateIds['Skipping'],
-        participantId: participantIds[8], // Nursing - Hawk
-        facultyId: facultyIds['Nursing'],
+        participantId: participantIds[8], // UCSC - Hawk
+        facultyId: facultyIds['UCSC'],
         invigilatorId: invigilatorIds['Judge 3 - Skipping'],
         roundNumber: 1,
         criteriaScores: [
@@ -814,12 +996,30 @@ async function seedData() {
         total: 85,
         timestamp: Date.now(),
       },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[10], // FOT - Apex
+        facultyId: facultyIds['FOT'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 19 },
+          { criteriaId: 'balance', score: 10 },
+          { criteriaId: 'endurance', score: 20 },
+          { criteriaId: 'speed', score: 10 },
+          { criteriaId: 'continuity', score: 29 },
+          { criteriaId: 'skill_variation', score: 10 },
+        ],
+        total: 98,
+        timestamp: Date.now(),
+      },
       // Boxing Combat - All Faculties
       {
         eventId: eventIds['Boxing Combat'],
         templateId: templateIds['Boxing Combat'],
-        participantId: participantIds[0], // UCSC - Thunder
-        facultyId: facultyIds['UCSC'],
+        participantId: participantIds[0], // FMF - Thunder
+        facultyId: facultyIds['FMF'],
         invigilatorId: invigilatorIds['Judge 4 - Combat'],
         roundNumber: 1,
         criteriaScores: [
@@ -840,8 +1040,8 @@ async function seedData() {
       {
         eventId: eventIds['Boxing Combat'],
         templateId: templateIds['Boxing Combat'],
-        participantId: participantIds[1], // UCSC - Lightning
-        facultyId: facultyIds['UCSC'],
+        participantId: participantIds[1], // FMF - Lightning
+        facultyId: facultyIds['FMF'],
         invigilatorId: invigilatorIds['Judge 4 - Combat'],
         roundNumber: 1,
         criteriaScores: [
@@ -862,8 +1062,8 @@ async function seedData() {
       {
         eventId: eventIds['Boxing Combat'],
         templateId: templateIds['Boxing Combat'],
-        participantId: participantIds[4], // Technology - Rocket
-        facultyId: facultyIds['Technology'],
+        participantId: participantIds[4], // UCFM - Rocket
+        facultyId: facultyIds['UCFM'],
         invigilatorId: invigilatorIds['Judge 4 - Combat'],
         roundNumber: 1,
         criteriaScores: [
@@ -884,8 +1084,8 @@ async function seedData() {
       {
         eventId: eventIds['Boxing Combat'],
         templateId: templateIds['Boxing Combat'],
-        participantId: participantIds[5], // Technology - Phoenix
-        facultyId: facultyIds['Technology'],
+        participantId: participantIds[5], // UCFM - Phoenix
+        facultyId: facultyIds['UCFM'],
         invigilatorId: invigilatorIds['Judge 4 - Combat'],
         roundNumber: 1,
         criteriaScores: [
@@ -906,8 +1106,8 @@ async function seedData() {
       {
         eventId: eventIds['Boxing Combat'],
         templateId: templateIds['Boxing Combat'],
-        participantId: participantIds[2], // Management - The Bull
-        facultyId: facultyIds['Management'],
+        participantId: participantIds[2], // FOS - The Bull
+        facultyId: facultyIds['FOS'],
         invigilatorId: invigilatorIds['Judge 4 - Combat'],
         roundNumber: 1,
         criteriaScores: [
@@ -928,8 +1128,8 @@ async function seedData() {
       {
         eventId: eventIds['Boxing Combat'],
         templateId: templateIds['Boxing Combat'],
-        participantId: participantIds[3], // Management - Viper
-        facultyId: facultyIds['Management'],
+        participantId: participantIds[3], // FOS - Viper
+        facultyId: facultyIds['FOS'],
         invigilatorId: invigilatorIds['Judge 4 - Combat'],
         roundNumber: 1,
         criteriaScores: [
@@ -950,8 +1150,8 @@ async function seedData() {
       {
         eventId: eventIds['Boxing Combat'],
         templateId: templateIds['Boxing Combat'],
-        participantId: participantIds[6], // Science - Titan
-        facultyId: facultyIds['Science'],
+        participantId: participantIds[6], // FON - Titan
+        facultyId: facultyIds['FON'],
         invigilatorId: invigilatorIds['Judge 4 - Combat'],
         roundNumber: 1,
         criteriaScores: [
@@ -972,8 +1172,8 @@ async function seedData() {
       {
         eventId: eventIds['Boxing Combat'],
         templateId: templateIds['Boxing Combat'],
-        participantId: participantIds[7], // Science - Blaze
-        facultyId: facultyIds['Science'],
+        participantId: participantIds[7], // FON - Blaze
+        facultyId: facultyIds['FON'],
         invigilatorId: invigilatorIds['Judge 4 - Combat'],
         roundNumber: 1,
         criteriaScores: [
@@ -991,12 +1191,12 @@ async function seedData() {
         total: 90,
         timestamp: Date.now(),
       },
-      // Boxing Combat - Nursing
+      // Boxing Combat - UCSC
       {
         eventId: eventIds['Boxing Combat'],
         templateId: templateIds['Boxing Combat'],
-        participantId: participantIds[8], // Nursing - Hawk
-        facultyId: facultyIds['Nursing'],
+        participantId: participantIds[8], // UCSC - Hawk
+        facultyId: facultyIds['UCSC'],
         invigilatorId: invigilatorIds['Judge 4 - Combat'],
         roundNumber: 1,
         criteriaScores: [
@@ -1017,8 +1217,8 @@ async function seedData() {
       {
         eventId: eventIds['Boxing Combat'],
         templateId: templateIds['Boxing Combat'],
-        participantId: participantIds[9], // Nursing - Storm
-        facultyId: facultyIds['Nursing'],
+        participantId: participantIds[9], // UCSC - Storm
+        facultyId: facultyIds['UCSC'],
         invigilatorId: invigilatorIds['Judge 4 - Combat'],
         roundNumber: 1,
         criteriaScores: [
@@ -1036,12 +1236,220 @@ async function seedData() {
         total: 94,
         timestamp: Date.now(),
       },
+      // Boxing Combat - FOT
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[10], // FOT - Apex
+        facultyId: facultyIds['FOT'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 10 },
+          { criteriaId: 'punching_technique_tactics', score: 20 },
+          { criteriaId: 'defense', score: 10 },
+          { criteriaId: 'footwork', score: 5 },
+          { criteriaId: 'combination_punching', score: 10 },
+          { criteriaId: 'endurance', score: 10 },
+          { criteriaId: 'distance_management', score: 10 },
+          { criteriaId: 'reading_the_opponent', score: 5 },
+          { criteriaId: 'domination', score: 10 },
+          { criteriaId: 'protecting_the_head', score: 10 },
+        ],
+        total: 100,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Boxing Combat'],
+        templateId: templateIds['Boxing Combat'],
+        participantId: participantIds[11], // FOT - Cobra
+        facultyId: facultyIds['FOT'],
+        invigilatorId: invigilatorIds['Judge 4 - Combat'],
+        roundNumber: 1,
+        criteriaScores: [
+          { criteriaId: 'stance_balance', score: 10 },
+          { criteriaId: 'punching_technique_tactics', score: 19 },
+          { criteriaId: 'defense', score: 9 },
+          { criteriaId: 'footwork', score: 5 },
+          { criteriaId: 'combination_punching', score: 10 },
+          { criteriaId: 'endurance', score: 10 },
+          { criteriaId: 'distance_management', score: 10 },
+          { criteriaId: 'reading_the_opponent', score: 5 },
+          { criteriaId: 'domination', score: 9 },
+          { criteriaId: 'protecting_the_head', score: 10 },
+        ],
+        total: 97,
+        timestamp: Date.now(),
+      },
     ];
 
     for (const score of dummyScores) {
       await addDoc(collection(db, 'scores'), score);
     }
     console.log(`✓ Created ${dummyScores.length} dummy scores`);
+
+    // 7.5. Duplicate combat scores for Judge 5 (two-judge combat system)
+    console.log('Creating Judge 5 combat scores...');
+    const judge5CombatScores = dummyScores
+      .filter(
+        (score) =>
+          score.eventId === eventIds['Boxing Combat'] &&
+          score.invigilatorId === invigilatorIds['Judge 4 - Combat']
+      )
+      .map((score) => ({
+        ...score,
+        invigilatorId: invigilatorIds['Judge 5 - Combat Judge 2'],
+        // Slightly vary scores to make averaging more realistic
+        criteriaScores: score.criteriaScores.map((c) => ({
+          ...c,
+          score: Math.max(0, c.score + (Math.random() > 0.5 ? 1 : -1)),
+        })),
+        total:
+          score.total +
+          (Math.random() > 0.5
+            ? Math.floor(Math.random() * 3)
+            : -Math.floor(Math.random() * 3)),
+      }));
+
+    for (const score of judge5CombatScores) {
+      await addDoc(collection(db, 'scores'), score);
+    }
+    console.log(`✓ Created ${judge5CombatScores.length} Judge 5 combat scores`);
+
+    // 8. Add Skipping Round 2 scores (for testing two-round skipping display)
+    console.log('Creating Skipping Round 2 scores...');
+    const skippingRound2Scores = [
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[0], // FMF - Thunder
+        facultyId: facultyIds['FMF'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 16 },
+          { criteriaId: 'balance', score: 8 },
+          { criteriaId: 'endurance', score: 18 },
+          { criteriaId: 'speed', score: 8 },
+          { criteriaId: 'continuity', score: 25 },
+          { criteriaId: 'skill_variation', score: 8 },
+        ],
+        total: 83,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[4], // UCFM - Rocket
+        facultyId: facultyIds['UCFM'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 18 },
+          { criteriaId: 'balance', score: 9 },
+          { criteriaId: 'endurance', score: 19 },
+          { criteriaId: 'speed', score: 9 },
+          { criteriaId: 'continuity', score: 28 },
+          { criteriaId: 'skill_variation', score: 9 },
+        ],
+        total: 92,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[2], // FOS - The Bull
+        facultyId: facultyIds['FOS'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 17 },
+          { criteriaId: 'balance', score: 9 },
+          { criteriaId: 'endurance', score: 19 },
+          { criteriaId: 'speed', score: 9 },
+          { criteriaId: 'continuity', score: 27 },
+          { criteriaId: 'skill_variation', score: 9 },
+        ],
+        total: 90,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[6], // FON - Titan
+        facultyId: facultyIds['FON'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 19 },
+          { criteriaId: 'balance', score: 10 },
+          { criteriaId: 'endurance', score: 20 },
+          { criteriaId: 'speed', score: 10 },
+          { criteriaId: 'continuity', score: 29 },
+          { criteriaId: 'skill_variation', score: 10 },
+        ],
+        total: 98,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[8], // UCSC - Hawk
+        facultyId: facultyIds['UCSC'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 18 },
+          { criteriaId: 'balance', score: 9 },
+          { criteriaId: 'endurance', score: 18 },
+          { criteriaId: 'speed', score: 9 },
+          { criteriaId: 'continuity', score: 27 },
+          { criteriaId: 'skill_variation', score: 9 },
+        ],
+        total: 90,
+        timestamp: Date.now(),
+      },
+      {
+        eventId: eventIds['Skipping'],
+        templateId: templateIds['Skipping'],
+        participantId: participantIds[10], // FOT - Apex
+        facultyId: facultyIds['FOT'],
+        invigilatorId: invigilatorIds['Judge 3 - Skipping'],
+        roundNumber: 2,
+        criteriaScores: [
+          { criteriaId: 'coordination', score: 20 },
+          { criteriaId: 'balance', score: 10 },
+          { criteriaId: 'endurance', score: 20 },
+          { criteriaId: 'speed', score: 10 },
+          { criteriaId: 'continuity', score: 30 },
+          { criteriaId: 'skill_variation', score: 10 },
+        ],
+        total: 100,
+        timestamp: Date.now(),
+      },
+    ];
+
+    for (const score of skippingRound2Scores) {
+      await addDoc(collection(db, 'scores'), score);
+    }
+    console.log(
+      `✓ Created ${skippingRound2Scores.length} Skipping Round 2 scores`
+    );
+
+    // 9. Create Active Participants document
+    console.log('Creating active participants document...');
+    await setDoc(doc(db, 'activeParticipants', 'current'), {
+      skipping: participantIds[0], // FMF - Thunder
+      shadowBoxing: participantIds[0], // FMF - Thunder
+      punchingBag: participantIds[0], // FMF - Thunder
+      combat: {
+        participant1: participantIds[0], // FMF - Thunder
+        participant2: participantIds[1], // FMF - Lightning
+      },
+      activeSkippingRound: 1,
+      activePhase: 1,
+    });
+    console.log('✓ Created active participants document');
 
     console.log('\n✅ Data seeding completed successfully!');
     console.log('\n📌 Login PINs:');

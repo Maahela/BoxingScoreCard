@@ -3,7 +3,12 @@ import type { AuthState, UserRole } from '@/types';
 
 interface AuthContextType {
   auth: AuthState;
-  login: (role: UserRole, invigilatorId?: string, name?: string, eventsAssigned?: string[]) => void;
+  login: (
+    role: UserRole,
+    invigilatorId?: string,
+    name?: string,
+    eventsAssigned?: string[]
+  ) => void;
   logout: () => void;
 }
 
@@ -15,7 +20,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const stored = localStorage.getItem('boxingAuth');
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        // Normalize: if marked authenticated but missing/invalid role, treat as logged out
+        const allowedRoles = ['admin', 'invigilator', 'display'];
+        if (
+          parsed?.isAuthenticated &&
+          (!parsed?.role || !allowedRoles.includes(parsed.role))
+        ) {
+          return { isAuthenticated: false, role: null };
+        }
+        return parsed;
       } catch {
         return { isAuthenticated: false, role: null };
       }
